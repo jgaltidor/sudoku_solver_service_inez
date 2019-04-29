@@ -1,0 +1,10 @@
+
+Develop application that:
+Given an input Sudoku board,
+where some squares are fixed to a number
+and some squares are blank,
+find a solutions to input board
+if it exists.
+If no solution exists,
+report that no solution exists.
+
