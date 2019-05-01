@@ -8,3 +8,9 @@ if it exists.
 If no solution exists,
 report that no solution exists.
 
+Take an existing Sudoku solution.
+Add some blanks to the board.
+Make the resulting board an input.
+Make the orginal board the ouput.
+Add a unit tests to tests.ml for
+testing this.
