@@ -26,7 +26,7 @@ let string_of_entry = function
 
 let equals entry1 entry2 =
   match (entry1, entry2) with
-  | (Blank, Blank) -> false
+  | (Blank, Blank) -> true
   | (Entry num1, Entry num2) -> num1 = num2
   | _ -> false
 ;;

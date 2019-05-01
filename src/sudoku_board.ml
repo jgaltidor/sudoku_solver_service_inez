@@ -49,9 +49,13 @@ let get_entry board rowInx colInx =
   List.nth_exn row colInx
 ;;
 
-(*
-let equal board1 board2 = 
+let equals_row row1 row2 =
+  List.equal ~equal:Sudoku_entry.equals row1 row2
+;;
+
+let equals board1 board2 =
   let rows1 = get_rows board1 in
   let rows2 = get_rows board2 in
+  List.equal ~equal:equals_row rows1 rows2
 ;;
-*)
+
