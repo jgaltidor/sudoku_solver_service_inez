@@ -1,32 +1,12 @@
 open Core.Std ;;
 open Utils ;;
 
-(** Type representing board entry **)
-type entry_t =
-  Blank
-| Entry of int
-;;
+let entry_of_num = Sudoku_entry.entry_of_num ;;
 
-let entry_of_num num =
-  if num < 0 || num > 9 then
-    let msg =
-      sprintf "input num not within range [0-9]: %d" num
-    in
-    failwith msg
-  else
-    begin
-      if num = 0 then Blank
-      else Entry num
-    end
-;;
-
-let string_of_entry = function
-| Blank -> "B"
-| Entry num -> string_of_int num
-;;
+let string_of_entry = Sudoku_entry.string_of_entry ;;
 
 (** Type representing Sudoku board data **)
-type t = entry_t list list ;;
+type t = Sudoku_entry.t list list ;;
 
 let board_of_entries rows = rows ;;
 
@@ -69,4 +49,9 @@ let get_entry board rowInx colInx =
   List.nth_exn row colInx
 ;;
 
-
+(*
+let equal board1 board2 = 
+  let rows1 = get_rows board1 in
+  let rows2 = get_rows board2 in
+;;
+*)
