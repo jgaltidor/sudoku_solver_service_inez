@@ -3,7 +3,7 @@ open Core.Std ;;
 (** Type representing board entry **)
 type t =
   Blank
-| Entry of int
+| Num of int
 ;;
 
 let entry_of_num num =
@@ -15,18 +15,30 @@ let entry_of_num num =
   else
     begin
       if num = 0 then Blank
-      else Entry num
+      else Num num
     end
 ;;
 
 let string_of_entry = function
 | Blank -> "B"
-| Entry num -> string_of_int num
+| Num num -> string_of_int num
 ;;
 
 let equals entry1 entry2 =
   match (entry1, entry2) with
   | (Blank, Blank) -> true
-  | (Entry num1, Entry num2) -> num1 = num2
+  | (Num num1, Num num2) -> num1 = num2
   | _ -> false
+;;
+
+let is_blank = function
+| Blank -> true
+| Num _ -> false
+;;
+
+let is_num entry = not (is_blank entry) ;;
+
+let to_num = function
+| Num num -> num
+| Blank -> failwith "Not a number"
 ;;

@@ -16,3 +16,5 @@ val get_num_cols : t -> int
 val get_entry : t -> int -> int -> Sudoku_entry.t
 
 val equals : t -> t -> bool
+
+(* val is_solved : t -> bool *)
