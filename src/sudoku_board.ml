@@ -15,14 +15,17 @@ let get_row board index =
   List.nth_exn rows index
 ;;
 
-let get_num_cols board =
-  let row0 = get_row board 0 in
-  List.length row0
-;;
-
 let get_num_rows board =
   let rows = get_rows board in
   List.length rows
+;;
+
+let get_num_cols board =
+  (* can just return number of rows because the constructor of boards,
+   * board_of_entries, checks that the board's dimensions are square
+   * (i.e. number of rows = number of columns)
+   *)
+  get_num_rows board
 ;;
 
 let is_square board =
@@ -87,15 +90,38 @@ let no_blanks board =
     List.for_all row ~f:Sudoku_entry.is_num)
 ;;
 
-(*
+let nums_contains_dup nums =
+  List.contains_dup ~compare:Int.compare nums
+;;
+
+let get_cols board =
+  let rows = get_rows board in
+  List.transpose_exn rows
+;;
+
+let nums_of_entries entries =
+  List.map entries ~f:Sudoku_entry.to_num
+;;
+
 let is_solved board =
   if no_blanks board then
     let rows = get_rows board in
-    List.for_all rows ~f:(fun row ->
-      List.f
-    )
+    let no_dups_in_rows =
+      List.for_all rows ~f:(fun row ->
+        let row_nums = nums_of_entries row in
+        not (nums_contains_dup row_nums)
+      )
+    in
+    if no_dups_in_rows then
+      let cols = get_cols board in
+      List.for_all cols ~f:(fun col ->
+        let col_nums = nums_of_entries col in
+        not (nums_contains_dup col_nums)
+      )
+    else
+      false
   else
     false
 ;;
 
-*)
+

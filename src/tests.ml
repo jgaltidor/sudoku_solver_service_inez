@@ -34,11 +34,9 @@ let solution_board_expected =
      [2; 8; 7;  4; 1; 9;  6; 3; 5];
      [3; 4; 5;  2; 8; 6;  1; 7; 9]];;
 
-(*
 printf "is_solved(solution_board_expected): %b\n"
-  (is_solved solution_board_expected)
+  (Sudoku_board.is_solved solution_board_expected)
 ;;
-*)
 
 (*
 let solution_board_actual =
