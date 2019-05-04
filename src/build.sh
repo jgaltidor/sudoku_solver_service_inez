@@ -10,3 +10,5 @@ ocamlfind ocamlopt -c tests.ml          -thread -package core
 # because tests.o depends on sudoku_board
 ocamlfind ocamlopt -o tests.opt utils.cmx sudoku_entry.cmx sudoku_board.cmx tests.cmx -thread -linkpkg -package core
 
+ocamlfind ocamlc   -c main_inputs_test1.mli  -thread -package core
+ocamlfind ocamlopt -c main_inputs_test1.ml   -thread -package core
