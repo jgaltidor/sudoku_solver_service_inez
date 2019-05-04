@@ -22,7 +22,20 @@ let board2 = Sudoku_board.board_of_nums sudoku_board_arr ;;
 
 printf "board1 = board2: %b\n" (Sudoku_board.equals board1 board2) ;;
 
-let solution_board_expected =
+let board_unsolved =
+  Sudoku_board.board_of_nums
+    [[5; 0; 4;  0; 7; 8;  0; 1; 2];
+     [0; 7; 2;  1; 0; 5;  3; 0; 8];
+     [1; 9; 0;  3; 4; 2;  5; 6; 0];
+     [8; 0; 9;  7; 6; 1;  0; 2; 3];
+     [4; 2; 6;  8; 5; 3;  7; 0; 0];
+     [0; 1; 0;  9; 2; 4;  8; 5; 6];
+     [9; 0; 1;  5; 3; 0;  2; 8; 4];
+     [2; 8; 7;  0; 1; 9;  6; 0; 5];
+     [0; 4; 5;  0; 8; 6;  1; 7; 0]];;
+
+
+let board_solved =
   Sudoku_board.board_of_nums
     [[5; 3; 4;  6; 7; 8;  9; 1; 2];
      [6; 7; 2;  1; 9; 5;  3; 4; 8];
@@ -34,8 +47,17 @@ let solution_board_expected =
      [2; 8; 7;  4; 1; 9;  6; 3; 5];
      [3; 4; 5;  2; 8; 6;  1; 7; 9]];;
 
-printf "is_solved(solution_board_expected): %b\n"
-  (Sudoku_board.is_solved solution_board_expected)
+
+printf "board_unsolved: %s\n" (Sudoku_board.string_of_board board_unsolved) ;;
+
+printf "board_solved: %s\n" (Sudoku_board.string_of_board board_solved) ;;
+
+printf "is_solved(board_unsolved): %b\n"
+  (Sudoku_board.is_solved board_unsolved)
+;;
+
+printf "is_solved(board_solved): %b\n"
+  (Sudoku_board.is_solved board_solved)
 ;;
 
 (*
