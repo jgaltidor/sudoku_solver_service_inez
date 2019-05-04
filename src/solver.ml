@@ -5,6 +5,10 @@ let input_board = Main_inputs_test1.input_board ;;
 
 printf "input_board: %s\n" (Sudoku_board.string_of_board input_board) ;;
 
+printf "is_solved(input_board): %b\n"
+  (Sudoku_board.is_solved input_board)
+;;
+
 (* Create input problem variables *)
 
 (* Create map from board positions to Inez integer variables:
@@ -16,14 +20,12 @@ printf "input_board: %s\n" (Sudoku_board.string_of_board input_board) ;;
 
 let num_rows = Sudoku_board.get_num_rows input_board ;;
 let num_cols = Sudoku_board.get_num_cols input_board ;;
+let maxRowIndex = num_rows - 1 ;;
+let maxColIndex = num_cols - 1 ;;
 
 let numEntries = num_rows * num_cols ;;
 
 let position2Var = Hashtbl.Poly.create ~size:numEntries () ;;
-
-let maxRowIndex = num_rows - 1 ;;
-
-let maxColIndex = num_cols - 1 ;;
 
 for rowIndex = 0 to maxRowIndex do
   for colIndex = 0 to maxColIndex do
@@ -55,6 +57,8 @@ Hashtbl.iter position2Var ~f:(fun ~key ~data ->
 )
 ;;
 
+
+
 (* Constraint adding:
  * Each row should not contain duplicates
  *)
@@ -83,4 +87,58 @@ for colIndex = 0 to maxColIndex do
   done
 done
 ;;
+
+(* Run solver *)
+let solver_result = solve () ;;
+
+match solver_result with
+| Terminology.R_Opt -> printf "Solution found\n"
+| Terminology.R_Sat -> printf "Solution found\n"
+| _ -> failwith "No solution found"
+;;
+
+(* Read in solution from solver *)
+
+let range num = List.init num ident ;;
+
+let rowIndices = range num_rows ;;
+let colIndices = range num_cols ;;
+
+let ideref_exn v =
+  match ideref v with
+  | Some i -> Int63.to_int_exn i
+  | None -> failwith "No such integer variable exists"
+;;
+
+let solution_rows =
+  List.map rowIndices ~f:(fun row ->
+    List.map colIndices ~f:(fun col ->
+      let var = Hashtbl.find_exn position2Var (row, col) in
+      let num = ideref_exn var in
+      num
+    )
+  )
+;;
+
+let actual_solved_board = Sudoku_board.board_of_nums solution_rows ;;
+
+let expected_solved_board = Main_inputs_test1.expected_solved_board ;;
+
+printf "actual_solved_board: %s\n"
+  (Sudoku_board.string_of_board actual_solved_board) ;;
+
+printf "expected_solved_board: %s\n"
+  (Sudoku_board.string_of_board expected_solved_board) ;;
+
+
+printf "is_solved(actual_solved_board): %b\n"
+  (Sudoku_board.is_solved actual_solved_board)
+;;
+
+printf "is_solved(expected_solved_board): %b\n"
+  (Sudoku_board.is_solved expected_solved_board)
+;;
+
+printf "actual_solved_board = expected_solved_board: %b\n"
+  (Sudoku_board.equals actual_solved_board expected_solved_board) ;;
 
