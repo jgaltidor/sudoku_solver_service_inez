@@ -21,8 +21,12 @@ let numEntries = num_rows * num_cols ;;
 
 let position2Var = Hashtbl.Poly.create ~size:numEntries () ;;
 
-for rowIndex = 0 to (num_rows-1) do
-  for colIndex = 0 to (num_cols-1) do
+let maxRowIndex = num_rows - 1 ;;
+
+let maxColIndex = num_cols - 1 ;;
+
+for rowIndex = 0 to maxRowIndex do
+  for colIndex = 0 to maxColIndex do
     let key = (rowIndex, colIndex) in
     let data = fresh_int_var () in
     Hashtbl.add_exn position2Var ~key ~data
@@ -30,17 +34,53 @@ for rowIndex = 0 to (num_rows-1) do
 done
 ;;
 
-
-(* Constraint:
+(* Constraint adding:
  * For every non-blank entry in the input board at position (i, j),
  * let n = numerical value of this entry.
  * The Inez variable v_i_j should be constrained to equal n.
+ * Also, every position variable should be between 1 and 9.
+ * So variables corresponding to blank position will just be
+ * constrained to be between 1 and 9.
  *)
+Hashtbl.iter position2Var ~f:(fun ~key ~data ->
+  let (row, col) = key in
+  let var = data in
+  let entry = Sudoku_board.get_entry input_board row col in
+  match entry with
+  | Sudoku_entry.Num num ->
+    constrain (~logic (var = (toi num)))
+  | Sudoku_entry.Blank ->
+      constrain (~logic (var >= 1)) ;
+      constrain (~logic (var <= 9))
+)
+;;
 
-
-(* Problem formulation *)
-
-(* Constraint:
+(* Constraint adding:
  * Each row should not contain duplicates
  *)
+for rowIndex = 0 to maxRowIndex do
+  for colLeft = 0 to maxColIndex do
+    let leftVar = Hashtbl.find_exn position2Var (rowIndex, colLeft) in
+    for colRight = (colLeft + 1) to maxColIndex do
+      let rightVar = Hashtbl.find_exn position2Var (rowIndex, colRight) in
+      constrain (~logic (not (leftVar = rightVar)))
+    done
+  done
+done
+;;
+
+
+(* Constraint adding:
+ * Each column should not contain duplicates
+ *)
+for colIndex = 0 to maxColIndex do
+  for rowLeft = 0 to maxRowIndex do
+    let leftVar = Hashtbl.find_exn position2Var (rowLeft, colIndex) in
+    for rowRight = (rowLeft + 1) to maxRowIndex do
+      let rightVar = Hashtbl.find_exn position2Var (rowRight, colIndex) in
+      constrain (~logic (not (leftVar = rightVar)))
+    done
+  done
+done
+;;
 
