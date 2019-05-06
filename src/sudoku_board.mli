@@ -13,6 +13,12 @@ val string_of_board : t -> string
 
 val json_of_board : t -> Yojson.Basic.t
 
+val write_file_json_of_output :
+  ?solved_board : t ->
+  input_board : t ->
+  filename : string ->
+  unit
+
 val get_num_rows : t -> int
 
 val get_num_cols : t -> int

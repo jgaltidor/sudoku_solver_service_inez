@@ -1,5 +1,4 @@
 open Core.Std ;;
-open Utils ;;
 
 let entry_of_num = Sudoku_entry.entry_of_num ;;
 
@@ -93,6 +92,27 @@ let json_of_board board =
     )
   in
   `List json_rows
+;;
+
+let json_of_output ?solved_board ~input_board =
+  let input_board_json = json_of_board input_board in
+  let has_solution = Option.is_some solved_board in
+  let has_solution_json = `Bool has_solution in
+  let solved_board_json =
+    match solved_board with
+    | Some board -> json_of_board board
+    | None -> `Null
+  in
+  `Assoc [
+    ("input_board", input_board_json);
+    ("has_solution", has_solution_json);
+    ("solved_board", solved_board_json)
+  ]
+;;
+
+let write_file_json_of_output ?solved_board ~input_board ~filename =
+  let json = json_of_output ?solved_board ~input_board in
+  Utils.write_json_file json filename
 ;;
 
 let get_entry board rowInx colInx =
