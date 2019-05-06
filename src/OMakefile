@@ -50,6 +50,7 @@ USE_OCAMLFIND = true
 #
 OCAMLPACKS[] =
    core
+   yojson
 
 #
 # if $(not $(OCAMLFIND_EXISTS))

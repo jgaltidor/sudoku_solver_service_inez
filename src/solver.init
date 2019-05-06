@@ -7,5 +7,6 @@ let () =
 #use "topfind" ;;
 #thread ;;
 #require "core" ;;
+#require "yojson" ;;
 
 #load "sudoku.cma" ;;

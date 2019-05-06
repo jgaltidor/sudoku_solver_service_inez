@@ -7,6 +7,8 @@ val board_of_nums : int list list -> t
 
 val board_of_entries : Sudoku_entry.t list list -> t
 
+val board_of_json_file : string -> t
+
 val string_of_board : t -> string
 
 val get_num_rows : t -> int
