@@ -66,15 +66,6 @@ let board_of_nums rows =
 
 let board_of_json json =
   let open Yojson.Basic.Util in
-  let board_rows_json_lists = json |> to_list in
-  let board_rows_json_ints = filter_list board_rows_json_lists in
-  let board_rows = List.map ~f:filter_int board_rows_json_ints in
-  board_of_nums board_rows
-;;
-
-
-let board_of_json json =
-  let open Yojson.Basic.Util in
   let json_values = json |> to_list in
   let json_lists = filter_list json_values in
   let rows = List.map json_lists ~f:filter_int in
