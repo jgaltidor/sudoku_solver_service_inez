@@ -64,13 +64,17 @@ let board_of_nums rows =
   board_of_entries entries
 ;;
 
-let board_of_json_file filename =
-  let json = Yojson.Basic.from_file filename in
+let board_of_json json =
   let open Yojson.Basic.Util in
   let board_rows_json_lists = json |> member "board" |> to_list in
   let board_rows_json_ints = filter_list board_rows_json_lists in
   let board_rows = List.map ~f:filter_int board_rows_json_ints in
   board_of_nums board_rows
+;;
+
+let board_of_json_file filename =
+  let json = Yojson.Basic.from_file filename in
+  board_of_json json
 ;;
 
 let get_entry board rowInx colInx =
