@@ -1,6 +1,12 @@
 open Script ;;
 open Core.Std ;;
 
+let ideref_exn v =
+  match ideref v with
+  | Some i -> Int63.to_int_exn i
+  | None -> failwith "No such integer variable exists"
+;;
+
 let input_board = Sudoku_board.board_of_json_file "sudoku.json" ;;
 
 printf "input_board: %s\n" (Sudoku_board.string_of_board input_board) ;;
@@ -91,54 +97,46 @@ done
 (* Run solver *)
 let solver_result = solve () ;;
 
-match solver_result with
-| Terminology.R_Opt -> printf "Solution found\n"
-| Terminology.R_Sat -> printf "Solution found\n"
-| _ -> failwith "No solution found"
+let solution_found =
+  match solver_result with
+  | Terminology.R_Opt -> true
+  | Terminology.R_Sat -> true
+  | _ -> false
 ;;
 
-(* Read in solution from solver *)
-
-let range num = List.init num ident ;;
-
-let rowIndices = range num_rows ;;
-let colIndices = range num_cols ;;
-
-let ideref_exn v =
-  match ideref v with
-  | Some i -> Int63.to_int_exn i
-  | None -> failwith "No such integer variable exists"
+if solution_found then
+  printf "Solution found\n"
+else
+  printf "No solution found\n"
 ;;
 
-let solution_rows =
-  List.map rowIndices ~f:(fun row ->
-    List.map colIndices ~f:(fun col ->
-      let var = Hashtbl.find_exn position2Var (row, col) in
-      let num = ideref_exn var in
-      num
-    )
-  )
+(* Read in solution from solver if it exists *)
+
+let solved_board_opt =
+  if solution_found then
+    let rowIndices = Utils.range num_rows in
+    let colIndices = Utils.range num_cols in
+    let solution_rows =
+      List.map rowIndices ~f:(fun row ->
+        List.map colIndices ~f:(fun col ->
+          let var = Hashtbl.find_exn position2Var (row, col) in
+          ideref_exn var
+        )
+      )
+    in
+    let solved_board = Sudoku_board.board_of_nums solution_rows in
+    Some solved_board
+  else
+    None
 ;;
 
-let actual_solved_board = Sudoku_board.board_of_nums solution_rows ;;
+let output_filename = "output.json" ;;
 
-let expected_solved_board = Main_inputs_test1.expected_solved_board ;;
+printf "Writing output file%s\n" output_filename ;;
 
-printf "actual_solved_board: %s\n"
-  (Sudoku_board.string_of_board actual_solved_board) ;;
-
-printf "expected_solved_board: %s\n"
-  (Sudoku_board.string_of_board expected_solved_board) ;;
-
-
-printf "is_solved(actual_solved_board): %b\n"
-  (Sudoku_board.is_solved actual_solved_board)
+Sudoku_board.write_file_json_of_output
+  ?solved_board:solved_board_opt
+  ~input_board
+  ~filename:"output.json"
 ;;
-
-printf "is_solved(expected_solved_board): %b\n"
-  (Sudoku_board.is_solved expected_solved_board)
-;;
-
-printf "actual_solved_board = expected_solved_board: %b\n"
-  (Sudoku_board.equals actual_solved_board expected_solved_board) ;;
 
