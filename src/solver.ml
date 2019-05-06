@@ -1,7 +1,7 @@
 open Script ;;
 open Core.Std ;;
 
-let input_board = Main_inputs_test1.input_board ;;
+let input_board = Sudoku_board.board_of_json_file "sudoku.json" ;;
 
 printf "input_board: %s\n" (Sudoku_board.string_of_board input_board) ;;
 
