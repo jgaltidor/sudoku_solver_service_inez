@@ -78,3 +78,12 @@ let execute cmd =
   print_endline "Command completed execution\n"
 ;;
 
+let write_json_file json filename =
+  let file = open_out filename in
+  Yojson.Basic.pretty_to_channel file json ;
+  Out_channel.newline file ;
+  Out_channel.close file
+;;
+
+let range num = List.init num ident ;;
+
