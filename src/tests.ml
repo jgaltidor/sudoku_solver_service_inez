@@ -68,18 +68,3 @@ printf "is_solved(board_solved): %b\n"
   (Sudoku_board.is_solved board_solved)
 ;;
 
-(*
-let solution_board_actual =
-  sudoku_solve sudoku_board ;;
-
-let solution_board_actual_arr =
-  match solution_board_actual
-  with
-  | Some solved_board ->
-     to_array solved_board
-  | None ->
-     raise Exception "Expected a solution to be found but none found"
-;;
-
-
-*)
