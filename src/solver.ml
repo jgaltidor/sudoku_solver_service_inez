@@ -132,7 +132,7 @@ let solved_board_opt =
 
 let output_filename = "output.json" ;;
 
-printf "Writing output file%s\n" output_filename ;;
+printf "Writing output file: %s\n" output_filename ;;
 
 Sudoku_board.write_file_json_of_output
   ?solved_board:solved_board_opt
