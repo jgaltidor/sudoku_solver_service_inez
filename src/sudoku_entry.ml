@@ -42,3 +42,4 @@ let to_num = function
 | Num num -> num
 | Blank -> failwith "Not a number"
 ;;
+

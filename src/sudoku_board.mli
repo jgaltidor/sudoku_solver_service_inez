@@ -11,6 +11,8 @@ val board_of_json_file : string -> t
 
 val string_of_board : t -> string
 
+val json_of_board : t -> Yojson.Basic.t
+
 val get_num_rows : t -> int
 
 val get_num_cols : t -> int

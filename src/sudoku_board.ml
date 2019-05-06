@@ -66,15 +66,42 @@ let board_of_nums rows =
 
 let board_of_json json =
   let open Yojson.Basic.Util in
-  let board_rows_json_lists = json |> member "board" |> to_list in
+  let board_rows_json_lists = json |> to_list in
   let board_rows_json_ints = filter_list board_rows_json_lists in
   let board_rows = List.map ~f:filter_int board_rows_json_ints in
   board_of_nums board_rows
 ;;
 
+
+let board_of_json json =
+  let open Yojson.Basic.Util in
+  let json_values = json |> to_list in
+  let json_lists = filter_list json_values in
+  let rows = List.map json_lists ~f:filter_int in
+  board_of_nums rows
+;;
+
 let board_of_json_file filename =
   let json = Yojson.Basic.from_file filename in
-  board_of_json json
+  let open Yojson.Basic.Util in
+  let json_board = json |> member "board" in
+  board_of_json json_board
+;;
+
+let json_of_entry = function
+| Sudoku_entry.Num num -> `Int num
+| Sudoku_entry.Blank -> `Int 0
+;;
+
+let json_of_board board =
+  let rows = get_rows board in
+  let json_rows =
+    List.map rows ~f:(fun row ->
+      let row_json_entries = List.map row ~f:json_of_entry in
+      `List row_json_entries
+    )
+  in
+  `List json_rows
 ;;
 
 let get_entry board rowInx colInx =
