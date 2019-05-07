@@ -71,13 +71,6 @@ let board_of_json json =
   board_of_nums rows
 ;;
 
-let board_of_json_file filename =
-  let json = Yojson.Basic.from_file filename in
-  let open Yojson.Basic.Util in
-  let json_board = json |> member "board" in
-  board_of_json json_board
-;;
-
 let json_of_entry = function
 | Sudoku_entry.Num num -> `Int num
 | Sudoku_entry.Blank -> `Int 0

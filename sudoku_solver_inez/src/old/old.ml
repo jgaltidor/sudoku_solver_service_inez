@@ -35,3 +35,12 @@ let solution_board_actual_arr =
 
 
 *)
+
+
+
+let board_of_json_file filename =
+  let json = Yojson.Basic.from_file filename in
+  let open Yojson.Basic.Util in
+  let json_board = json |> member "input_board" in
+  board_of_json json_board
+;;

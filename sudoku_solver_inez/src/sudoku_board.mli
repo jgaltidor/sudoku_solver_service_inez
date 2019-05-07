@@ -7,7 +7,7 @@ val board_of_nums : int list list -> t
 
 val board_of_entries : Sudoku_entry.t list list -> t
 
-val board_of_json_file : string -> t
+val board_of_json : Yojson.Basic.t -> t
 
 val string_of_board : t -> string
 
