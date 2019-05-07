@@ -7,7 +7,9 @@ let ideref_exn v =
   | None -> failwith "No such integer variable exists"
 ;;
 
-let input_board = Sudoku_board.board_of_json_file "sudoku.json" ;;
+let config = Sudoku_config.create () ;;
+
+let input_board = Sudoku_config.get_input_board config ;;
 
 printf "input_board: %s\n" (Sudoku_board.string_of_board input_board) ;;
 
@@ -130,7 +132,7 @@ let solved_board_opt =
     None
 ;;
 
-let output_filename = "output.json" ;;
+let output_filename = Sudoku_config.get_output_file config ;;
 
 printf "Writing output file: %s\n" output_filename ;;
 
