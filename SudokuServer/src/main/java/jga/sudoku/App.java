@@ -103,9 +103,13 @@ public class App extends NanoHTTPD
       */
       return newFixedLengthResponse(solverResults + "\n");
     }
-    catch(IOException | InterruptedException e) {
+    catch(IOException e) {
       return newFixedLengthResponse(
-          "SERVER INTERNAL ERROR: Exception: " + e.getMessage() + '\n');
+        "SERVER INTERNAL ERROR: IOException: " + e.getMessage() + '\n');
+    }
+    catch(InterruptedException e) {
+      return newFixedLengthResponse(
+        "SERVER INTERNAL ERROR: InterruptedException: " + e.getMessage() + '\n');
     }
   }
 
