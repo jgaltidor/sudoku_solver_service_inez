@@ -104,7 +104,7 @@ LIB_FILES[] =
    utils
    sudoku_entry
    sudoku_board
-   main_inputs_test1
+   sudoku_config
 
 LIB = sudoku
 .DEFAULT: $(OCamlLibrary $(LIB), $(LIB_FILES))

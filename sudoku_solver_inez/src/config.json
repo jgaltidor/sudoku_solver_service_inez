@@ -1,0 +1,4 @@
+{
+  "input_board_file"   : "sudoku.json",
+  "output_file"        : "output.json"
+}
