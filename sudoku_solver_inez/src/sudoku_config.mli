@@ -1,8 +1,8 @@
 
-(* Type representing a configuration *)
+(* Type representing input configuration *)
 type t
 
-val create : unit -> t
+val create : ?filename:string -> unit -> t
 
 val get_input_board : t -> Sudoku_board.t
 
