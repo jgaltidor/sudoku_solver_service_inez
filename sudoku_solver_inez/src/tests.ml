@@ -34,8 +34,9 @@ let board_unsolved1 =
      [2; 8; 7;  0; 1; 9;  6; 0; 5];
      [0; 4; 5;  0; 8; 6;  1; 7; 0]];;
 
-let board_unsolved2 =
-  Sudoku_board.board_of_json_file "sudoku.json" ;;
+let config = Sudoku_config.create ~filename:"sudoku_config.json" () ;;
+
+let board_unsolved2 = Sudoku_config.get_input_board config ;;
 
 let board_solved =
   Sudoku_board.board_of_nums
