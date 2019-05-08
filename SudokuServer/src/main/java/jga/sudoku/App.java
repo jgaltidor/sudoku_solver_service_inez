@@ -16,10 +16,8 @@ import org.json.simple.parser.ParseException;
 
 public class App extends NanoHTTPD
 {
-  private static final File solverSrcDir = new File(
-    "/Users/johnaltidor/mywork/newprjs/sudoku_solver_inez_prj/sudoku_solver_service_inez/sudoku_solver_inez/src");
-  
-  private static final File runSolverScript = new File(solverSrcDir, "run_solver.sh");
+  private static final File runSolverScript = new File(
+    "/Users/johnaltidor/mywork/newprjs/sudoku_solver_inez_prj/sudoku_solver_service_inez/sudoku_solver_inez/src/run_solver.sh");
 
   private static final File sudokuConfigFile = new File("sudoku_config.json");
   
