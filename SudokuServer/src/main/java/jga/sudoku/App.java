@@ -5,19 +5,26 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.Map;
 import fi.iki.elonen.NanoHTTPD;
+
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 public class App extends NanoHTTPD
 {
+  private static final File solverSrcDir = new File(
+    "/Users/johnaltidor/mywork/newprjs/sudoku_solver_inez_prj/sudoku_solver_service_inez/sudoku_solver_inez/src");
+  
+  private static final File runSolverScript = new File(solverSrcDir, "run_solver.sh");
+
+  private static final File sudokuConfigFile = new File("sudoku_config.json");
+  
+  private static final File sudokuOutputFile = new File("sudoku_output.json");
+	
   public App() throws IOException {
     super(8080);
     start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);
@@ -32,12 +39,9 @@ public class App extends NanoHTTPD
     }
   }
 
-  private static File solverSrcDir = new File(
-      "/Users/johnaltidor/mywork/newprjs/sudoku_solver_inez_prj/sudoku_solver_service_inez/sudoku_solver_inez/src");
-
   @Override
-  public Response serve(IHTTPSession session) {
-
+  public Response serve(IHTTPSession session)
+  {
     Map<String, String> files = new HashMap<String, String>();
     Method method = session.getMethod();
     if (Method.PUT.equals(method) || Method.POST.equals(method)) {
@@ -56,51 +60,22 @@ public class App extends NanoHTTPD
     // get the POST body
     String postBody = files.get("postData");
     System.out.println("postBody: " + postBody);
-    // Check that the POST body is valid JSON
-    JSONParser parser = new JSONParser();
-    JSONObject json;
     try {
-      json = (JSONObject) parser.parse(postBody);
+    	JSONParser parser = new JSONParser();
+    	JSONObject postRequestJson = (JSONObject) parser.parse(postBody);
+    	writeSudokuConfigFile(postRequestJson);
     }
     catch(ParseException e) {
-      return newFixedLengthResponse(
-          "SERVER INTERNAL ERROR: ParseException: " + e.getMessage());
-    }
-    File jsonInputFile = new File(solverSrcDir, "sudoku.json");
-    jsonInputFile.delete();
-    System.out.println("Writing JSON input to file: " + jsonInputFile);
-    try {
-      FileWriter writer = new FileWriter(jsonInputFile);
-      json.writeJSONString(writer);
-      writer.close();
-    }
+        return newFixedLengthResponse(
+            "SERVER INTERNAL ERROR: ParseException: " + e.getMessage());
+      }
     catch(IOException e) {
       return newFixedLengthResponse(
           "SERVER INTERNAL ERROR: IOException: " + e.getMessage() + '\n');
     }
-    File runSolverScript = new File(solverSrcDir, "run_solver.sh");
     try {
-      File serverOutputFile = new File("server_output.json");
-      serverOutputFile.delete();
-      File solverOutputFile = new File(solverSrcDir, "output.json");
-      solverOutputFile.delete();
-      String command = runSolverScript.getCanonicalPath();
-      execute(command);
-      
-      Files.copy(
-        solverOutputFile.toPath(),
-    	serverOutputFile.toPath(),
-    	StandardCopyOption.REPLACE_EXISTING);
-      String solverResults = readFile(serverOutputFile);
-      /*
-      StringBuffer rsb = new StringBuffer("<html><body>")
-          .append("<p>solver results: ")
-          .append(solverResults)
-          .append("</p>")
-          .append("</body></html>\n");
-        
-      return newFixedLengthResponse(rsb.toString());
-      */
+      String solverResults = runSolver();
+      System.out.println(solverResults);
       return newFixedLengthResponse(solverResults + "\n");
     }
     catch(IOException e) {
@@ -113,13 +88,39 @@ public class App extends NanoHTTPD
     }
   }
 
+  private static String runSolver() throws IOException, InterruptedException {
+	  sudokuOutputFile.delete();
+	  String command = runSolverScript.getCanonicalPath();
+	  execute(command);
+	  String solverResults = readFile(sudokuOutputFile);
+	  return solverResults;
+  }
+
+  private static void writeSudokuConfigFile(JSONObject postRequestJson) throws IOException {
+	  sudokuConfigFile.delete();
+	  JSONObject configJson = createConfigJSON(postRequestJson);
+	  System.out.println("Writing JSON input to file: " + sudokuConfigFile);
+	  FileWriter writer = new FileWriter(sudokuConfigFile);
+	  configJson.writeJSONString(writer);
+	  writer.close();
+  }
+  
+  
+  @SuppressWarnings("unchecked")
+  private static JSONObject createConfigJSON(JSONObject postRequestJson) {
+	  JSONArray boardJson = (JSONArray) postRequestJson.get("board");
+	  JSONObject configJson = new JSONObject();
+	  configJson.put("input_board", boardJson);
+	  configJson.put("output_file", sudokuOutputFile.getName());
+	  return configJson;
+  }
+
 
   private static void execute(String command)
       throws InterruptedException, IOException
   {
     System.out.println("Command: " + command);
-    String[] cmdargs = {"bash", "-l", command};
-    ProcessBuilder pb = new ProcessBuilder(cmdargs).inheritIO();
+    ProcessBuilder pb = new ProcessBuilder(command).inheritIO();
     pb.environment();
     Process process = pb.start();
     int exitValue = process.waitFor();
@@ -127,7 +128,6 @@ public class App extends NanoHTTPD
       throw new IOException(String.format(
           "Error code %d returned from command: %s", exitValue, command));
     }
-    // Thread.sleep(10); // give time for command to finish writing file
   }
 
   private static String readFile(File file) throws IOException {
