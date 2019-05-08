@@ -120,7 +120,8 @@ public class App extends NanoHTTPD
       throws InterruptedException, IOException
   {
     System.out.println("Command: " + command);
-    ProcessBuilder pb = new ProcessBuilder(command).inheritIO();
+    String[] cmdargs = {"bash", "-l", command};
+    ProcessBuilder pb = new ProcessBuilder(cmdargs).inheritIO();
     pb.environment();
     Process process = pb.start();
     int exitValue = process.waitFor();
