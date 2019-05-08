@@ -2,11 +2,14 @@ package jga.sudoku;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
+
 import fi.iki.elonen.NanoHTTPD;
 
 import org.json.simple.JSONArray;
@@ -16,16 +19,40 @@ import org.json.simple.parser.ParseException;
 
 public class App extends NanoHTTPD
 {
-  private static final File runSolverScript = new File(
-    "/Users/johnaltidor/mywork/newprjs/sudoku_solver_inez_prj/sudoku_solver_service_inez/sudoku_solver_inez/src/run_solver.sh");
+  private static class Config
+  {
+	  private final File solverScript;
+	  private final File sudokuConfigFile;
+	  private final File sudokuOutputFile;
 
-  private static final File sudokuConfigFile = new File("sudoku_config.json");
+	  Config(File runSolverScript, File sudokuConfigFile, File sudokuOutputFile)
+	  {
+		this.solverScript = runSolverScript;
+		this.sudokuConfigFile = sudokuConfigFile;
+		this.sudokuOutputFile = sudokuOutputFile;
+	  }
+  }
+
+  private static final String configFileName = "sudoku_server.conf";
+
+  private static Config loadConfig() throws IOException {
+	Properties props = new Properties();
+	props.load(App.class.getClassLoader().getResourceAsStream(configFileName));
+	File solverScript = new File(props.getProperty("solver_script_file"));
+	File sudokuConfigFile = new File(props.getProperty("sudoku_config_file"));
+	File sudokuOutputFile = new File(props.getProperty("sudoku_output_file"));
+	if(!solverScript.exists()) {
+		throw new FileNotFoundException("Missing file: "+ solverScript.getName());
+	}
+	return new Config(solverScript, sudokuConfigFile, sudokuOutputFile);
+  }
   
-  private static final File sudokuOutputFile = new File("sudoku_output.json");
+  private final Config config;
 	
   public App() throws IOException {
     super(8080);
     start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);
+    this.config = loadConfig();
     System.out.println("\nRunning! Point your browsers to http://localhost:8080/ \n");
   }
 
@@ -36,6 +63,12 @@ public class App extends NanoHTTPD
       System.err.println("Couldn't start server:\n" + ioe);
     }
   }
+
+  private File getSolverScript() { return config.solverScript; }
+
+  private File getSudokuConfigFile() { return config.sudokuConfigFile; }
+
+  private File getSudokuOutputFile() { return config.sudokuOutputFile; }
 
   @Override
   public Response serve(IHTTPSession session)
@@ -86,15 +119,17 @@ public class App extends NanoHTTPD
     }
   }
 
-  private static String runSolver() throws IOException, InterruptedException {
-	  sudokuOutputFile.delete();
-	  String command = runSolverScript.getCanonicalPath();
+  private String runSolver() throws IOException, InterruptedException {
+	  File sudokuOutputFile = getSudokuOutputFile();
+	  getSudokuOutputFile().delete();
+	  String command = getSolverScript().getCanonicalPath();
 	  execute(command);
 	  String solverResults = readFile(sudokuOutputFile);
 	  return solverResults;
   }
 
-  private static void writeSudokuConfigFile(JSONObject postRequestJson) throws IOException {
+  private void writeSudokuConfigFile(JSONObject postRequestJson) throws IOException {
+	  File sudokuConfigFile = getSudokuConfigFile();
 	  sudokuConfigFile.delete();
 	  JSONObject configJson = createConfigJSON(postRequestJson);
 	  System.out.println("Writing JSON input to file: " + sudokuConfigFile);
@@ -105,9 +140,10 @@ public class App extends NanoHTTPD
   
   
   @SuppressWarnings("unchecked")
-  private static JSONObject createConfigJSON(JSONObject postRequestJson) {
+  private JSONObject createConfigJSON(JSONObject postRequestJson) {
 	  JSONArray boardJson = (JSONArray) postRequestJson.get("board");
 	  JSONObject configJson = new JSONObject();
+	  File sudokuOutputFile = getSudokuOutputFile();
 	  configJson.put("input_board", boardJson);
 	  configJson.put("output_file", sudokuOutputFile.getName());
 	  return configJson;
