@@ -29,6 +29,6 @@ val get_files_in_dir : string -> string list
 
 val string_ends_with : string -> string -> bool
 
-val write_json_file : Yojson.Basic.t -> string -> unit
+val write_json_file : Yojson.Basic.json -> string -> unit
 
 val range : int -> int list
