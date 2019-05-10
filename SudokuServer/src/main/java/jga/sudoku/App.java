@@ -24,12 +24,14 @@ public class App extends NanoHTTPD
     private final File solverScript;
     private final File sudokuConfigFile;
     private final File sudokuOutputFile;
+    private final int port;
 
-    Config(File runSolverScript, File sudokuConfigFile, File sudokuOutputFile)
+    Config(File runSolverScript, File sudokuConfigFile, File sudokuOutputFile, int port)
     {
       this.solverScript = runSolverScript;
       this.sudokuConfigFile = sudokuConfigFile;
       this.sudokuOutputFile = sudokuOutputFile;
+      this.port = port;
     }
   }
 
@@ -41,24 +43,29 @@ public class App extends NanoHTTPD
     File solverScript = new File(props.getProperty("solver_script_file"));
     File sudokuConfigFile = new File(props.getProperty("sudoku_config_file"));
     File sudokuOutputFile = new File(props.getProperty("sudoku_output_file"));
+    int port = Integer.parseInt(props.getProperty("server_port"));
     if(!solverScript.exists()) {
       throw new FileNotFoundException("Missing file: "+ solverScript.getName());
     }
-    return new Config(solverScript, sudokuConfigFile, sudokuOutputFile);
+    return new Config(solverScript, sudokuConfigFile, sudokuOutputFile, port);
   }
 
   private final Config config;
 
-  public App() throws IOException {
-    super(8080);
+  public App(Config config) throws IOException {
+    super(config.port);
     start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);
-    this.config = loadConfig();
-    System.out.println("\nRunning! Point your browsers to http://localhost:8080/ \n");
+    this.config = config;
+    System.out.printf(
+      "Running! Point your browsers to http://localhost:%d/%n",
+      config.port);
+    System.out.println();
   }
 
   public static void main(String[] args) {
     try {
-      new App();
+      Config config = loadConfig();
+      new App(config);
     } catch (IOException ioe) {
       System.err.println("Couldn't start server:\n" + ioe);
     }
