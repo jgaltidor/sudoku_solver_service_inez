@@ -7,6 +7,7 @@ export DYLD_FALLBACK_LIBRARY_PATH=$SCIP_SUITE_DIR/lib:$DYLD_FALLBACK_LIBRARY_PAT
 # For Linux
 export LD_LIBRARY_PATH=$SCIP_SUITE_DIR/lib:$LD_LIBRARY_PATH
 export TMPDIR=$HOME/tmp
+eval `opam config env`
 $INEZ/frontend/inez.top -noprompt \
   -I $INEZ/frontend \
   -I $SUDOKU_SOLVER_SRC \
