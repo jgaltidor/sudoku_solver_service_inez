@@ -57,7 +57,7 @@ public class App extends NanoHTTPD
     start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);
     this.config = config;
     System.out.printf(
-      "Running! Point your browsers to http://localhost:%d/%n",
+      "%nRunning! Point your browsers to http://localhost:%d/%n",
       config.port);
     System.out.println();
   }
