@@ -1,0 +1,169 @@
+<html>
+  <head><link rel="stylesheet" href="index.css" /></head>
+  <div class="root-box blue-box">
+    <div class="pageHeaderTitle">Sudoku Solver</div>
+    <div style="clear: both;"></div>
+    <div class="mainContent">
+      <div class="grid">
+        <div class = "gridRow" >
+          <div class = "gridCell gridLabel gridRowLabel gridColumnLabel border" ></div>
+          <div class = "gridCell gridLabel gridColumnLabel border" >1</div>
+          <div class = "gridCell gridLabel gridColumnLabel border" >2</div>
+          <div class = "gridCell gridLabel gridColumnLabel border" >3</div>
+          <div class = "gridColumnSeparator"></div>
+          <div class = "gridCell gridLabel gridColumnLabel border" >4</div>
+          <div class = "gridCell gridLabel gridColumnLabel border" >5</div>
+          <div class = "gridCell gridLabel gridColumnLabel border" >6</div>
+          <div class = "gridColumnSeparator"></div>
+          <div class = "gridCell gridLabel gridColumnLabel border" >7</div>
+          <div class = "gridCell gridLabel gridColumnLabel border" >8</div>
+          <div class = "gridCell gridLabel gridColumnLabel border" >9</div>
+        </div>
+        <div style="clear: both;"></div>
+        <div class = "gridRow" >
+          <div class = "gridCell gridLabel gridRowLabel border" >A</div>
+          <input class = "gridCell inputcell" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <div class = "gridColumnSeparator"></div>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <div class = "gridColumnSeparator"></div>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+        </div>
+        <div style="clear: both;"></div>
+        <div class = "gridRow" >
+          <div class = "gridCell gridLabel gridRowLabel border" >B</div>
+          <input class = "gridCell inputcell" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <div class = "gridColumnSeparator"></div>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <div class = "gridColumnSeparator"></div>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+        </div>
+        <div class = "gridRow" >
+          <div class = "gridCell gridLabel gridRowLabel border" >C</div>
+          <input class = "gridCell inputcell" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <div class = "gridColumnSeparator"></div>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <div class = "gridColumnSeparator"></div>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+        </div>
+        <div style="clear: both;"></div>
+        <div class = "gridRowSeparator"></div>
+        <div style="clear: both;"></div>
+        <div class = "gridRow" >
+          <div class = "gridCell gridLabel gridRowLabel border" >D</div>
+          <input class = "gridCell inputcell" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <div class = "gridColumnSeparator"></div>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <div class = "gridColumnSeparator"></div>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+        </div>
+        <div style="clear: both;"></div>
+        <div class = "gridRow" >
+          <div class = "gridCell gridLabel gridRowLabel border" >E</div>
+          <input class = "gridCell inputcell" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <div class = "gridColumnSeparator"></div>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <div class = "gridColumnSeparator"></div>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+        </div>
+        <div class = "gridRow" >
+          <div class = "gridCell gridLabel gridRowLabel border" >F</div>
+          <input class = "gridCell inputcell" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <div class = "gridColumnSeparator"></div>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <div class = "gridColumnSeparator"></div>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+        </div>
+        <div style="clear: both;"></div>
+        <div class = "gridRowSeparator"></div>
+        <div style="clear: both;"></div>
+        <div class = "gridRow" >
+          <div class = "gridCell gridLabel gridRowLabel border" >G</div>
+          <input class = "gridCell inputcell" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <div class = "gridColumnSeparator"></div>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <div class = "gridColumnSeparator"></div>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+        </div>
+        <div style="clear: both;"></div>
+        <div class = "gridRow" >
+          <div class = "gridCell gridLabel gridRowLabel border" >H</div>
+          <input class = "gridCell inputcell" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <div class = "gridColumnSeparator"></div>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <div class = "gridColumnSeparator"></div>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+        </div>
+        <div class = "gridRow" >
+          <div class = "gridCell gridLabel gridRowLabel border" >I</div>
+          <input class = "gridCell inputcell" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <div class = "gridColumnSeparator"></div>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <div class = "gridColumnSeparator"></div>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+          <input class = "gridCell inputcell border" type="text" maxlength="1" ></input>
+        </div>
+      </div>
+      <div class="buttonsContainer">
+        <fieldset id="buttonArea">
+          <legend id="buttonAreaLegend">Features</legend>
+          <div class = "button rounded">Solve</div>
+          <div style="clear: both; height: 20px;"></div>
+          <div class = "button rounded">Clear</div>
+        </fieldset>
+      </div>
+    </div>
+  </div>
+</html>

@@ -1,0 +1,10 @@
+
+Commands:
+
+npx create-react-app sudoku-ui
+cd sudoku-ui
+npm start
+
+Example Sudoku UI:
+
+https://www.sudoku-solutions.com/
