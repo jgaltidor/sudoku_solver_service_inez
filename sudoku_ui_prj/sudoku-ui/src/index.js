@@ -24,7 +24,7 @@ function RowLabel(props) {
 
 function RowSeparator() {
   return (
-   <div style={{clear: 'both'}} />
+    <div style={{clear: 'both'}} />
   );
 }
 
@@ -62,10 +62,10 @@ class Cell extends React.Component
   render() {
     return (
       <input className = "gridCell inputcell"
-            type       = "text"
-            maxLength  = "1" 
-            value      = {this.state.value}
-            onChange   = {this.handleChange}>
+             type       = "text"
+             maxLength  = "1"
+             value      = {this.state.value}
+             onChange   = {this.handleChange}>
       </input>
     );
   }
@@ -73,28 +73,38 @@ class Cell extends React.Component
 
 function ColumnSeparator() {
   return (
-   <div className = "gridColumnSeparator"></div>
+    <div className = "gridColumnSeparator"></div>
   );
 }
 
 
-function GridRow(props) {
-  return (
-    <div className = "gridRow" >
-      <RowLabel label={props.rowlabel} />
-      <Cell />
-      <Cell />
-      <Cell />
-      <ColumnSeparator />
-      <Cell />
-      <Cell />
-      <Cell />
-      <ColumnSeparator />
-      <Cell />
-      <Cell />
-      <Cell />
-    </div>
-  );
+class GridRow extends React.Component
+{
+  constructor(props) {
+    super(props);
+    this.state = {
+      rowlabel: props.rowlabel
+    }
+  }
+
+  render() {
+    return (
+      <div className = "gridRow" >
+        <RowLabel label={this.state.rowlabel} />
+        <Cell />
+        <Cell />
+        <Cell />
+        <ColumnSeparator />
+        <Cell />
+        <Cell />
+        <Cell />
+        <ColumnSeparator />
+        <Cell />
+        <Cell />
+        <Cell />
+      </div>
+    );
+  }
 }
 
 function SquareRowSeparator() {
@@ -107,37 +117,51 @@ function SquareRowSeparator() {
   );
 }
 
-function Grid() {
-  return (
-    <div className="grid">
-      <TitleRow />
-      <RowSeparator />
-      <GridRow rowlabel="A" />
-      <GridRow rowlabel="B" />
-      <GridRow rowlabel="C" />
-      <SquareRowSeparator />
-      <GridRow rowlabel="D" />
-      <GridRow rowlabel="E" />
-      <GridRow rowlabel="F" />
-      <SquareRowSeparator />
-      <GridRow rowlabel="G" />
-      <GridRow rowlabel="H" />
-      <GridRow rowlabel="I" />            
-    </div>
-  );
+class Grid extends React.Component
+{
+  constructor(props) {
+    super(props);
+  }
+
+  render() {
+    return (
+      <div className="grid">
+        <TitleRow />
+        <RowSeparator />
+        <GridRow rowlabel="A" />
+        <GridRow rowlabel="B" />
+        <GridRow rowlabel="C" />
+        <SquareRowSeparator />
+        <GridRow rowlabel="D" />
+        <GridRow rowlabel="E" />
+        <GridRow rowlabel="F" />
+        <SquareRowSeparator />
+        <GridRow rowlabel="G" />
+        <GridRow rowlabel="H" />
+        <GridRow rowlabel="I" />
+      </div>
+    );
+  }
 }
 
-function ButtonArea() {
-  return (
-    <div className="buttonsContainer">
-      <fieldset id="buttonArea">
-        <legend id="buttonAreaLegend">Features</legend>
-        <div className = "button rounded">Solve</div>
-        <div style={{clear: 'both', height: '20px'}}></div>
-        <div className = "button rounded">Clear</div>
-      </fieldset>
-    </div>
-  );
+class ButtonArea extends React.Component
+{
+  constructor(props) {
+    super(props);
+  }
+
+  render() {
+    return (
+      <div className="buttonsContainer">
+        <fieldset id="buttonArea">
+          <legend id="buttonAreaLegend">Features</legend>
+          <div className = "button rounded">Solve</div>
+          <div style={{clear: 'both', height: '20px'}}></div>
+          <div className = "button rounded">Clear</div>
+        </fieldset>
+      </div>
+    );
+  }
 }
 
 class Game extends React.Component
