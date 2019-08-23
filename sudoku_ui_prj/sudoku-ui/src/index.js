@@ -142,6 +142,22 @@ function ButtonArea() {
 
 class Game extends React.Component
 {
+  constructor(props) {
+    super(props);
+    var rows = new Array(9);
+    var i;
+    for(i = 0; i < rows.length; i++) {
+      rows[i] = new Array(9);
+      var j;
+      for(j = 0; j < rows[i].length; j++) {
+        rows[i][j] = new Cell();
+      }
+    }
+    this.state = {
+      rows : rows
+    };
+  }
+
   render() {
     return (
       <div className="root-box blue-box">
