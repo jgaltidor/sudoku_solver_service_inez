@@ -114,7 +114,6 @@
 }
 
 .buttonsContainer {
-  float       : right;
   display     : block;
   margin-top  : 10px;
 }
@@ -152,4 +151,23 @@
 #buttonAreaLegend {
   font-size : 20px;
 }
+
+.response-box {
+  box-shadow          : none;
+  border              : none;
+  background-color    : #194972;
+  color               : red;
+  margin-left         : 20px;
+  height              : 40px;
+  line-height         : 40px;
+}
+
+.left-box {
+  float  : left;
+}
+
+.right-box {
+  float            : right;
+}
+
 

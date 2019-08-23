@@ -51,23 +51,36 @@ class Cell extends React.Component
 {
   constructor(props) {
     super(props);
-    this.state = {value: ''};
+    this.state = {
+      data  : props.data
+    };
     this.handleChange = this.handleChange.bind(this);
   }
 
   handleChange(event) {
-    this.setState({value: event.target.value});
+    let newValue = event.target.value;
+    this.state.data.updateCell(newValue);
+    this.setState({
+      data: {
+        value       : newValue,
+        updateCell  : this.state.data.updateCell
+      }
+    });
   }
 
   render() {
     return (
-      <input className = "gridCell inputcell"
+      <input className  = "gridCell inputcell"
              type       = "text"
              maxLength  = "1"
-             value      = {this.state.value}
+             value      = {this.state.data.value}
              onChange   = {this.handleChange}>
       </input>
     );
+  }
+
+  getValue() {
+    return this.state.value;
   }
 }
 
@@ -83,7 +96,8 @@ class GridRow extends React.Component
   constructor(props) {
     super(props);
     this.state = {
-      rowlabel: props.rowlabel
+      rowlabel  : props.rowlabel,
+      row       : props.row,
     }
   }
 
@@ -91,17 +105,17 @@ class GridRow extends React.Component
     return (
       <div className = "gridRow" >
         <RowLabel label={this.state.rowlabel} />
-        <Cell />
-        <Cell />
-        <Cell />
+        <Cell data = {this.state.row[0]} />
+        <Cell data = {this.state.row[1]} />
+        <Cell data = {this.state.row[2]} />
         <ColumnSeparator />
-        <Cell />
-        <Cell />
-        <Cell />
+        <Cell data = {this.state.row[3]} />
+        <Cell data = {this.state.row[4]} />
+        <Cell data = {this.state.row[5]} />
         <ColumnSeparator />
-        <Cell />
-        <Cell />
-        <Cell />
+        <Cell data = {this.state.row[6]} />
+        <Cell data = {this.state.row[7]} />
+        <Cell data = {this.state.row[8]} />
       </div>
     );
   }
@@ -121,6 +135,9 @@ class Grid extends React.Component
 {
   constructor(props) {
     super(props);
+    this.state = {
+      rows: props.rows
+    };
   }
 
   render() {
@@ -128,17 +145,104 @@ class Grid extends React.Component
       <div className="grid">
         <TitleRow />
         <RowSeparator />
-        <GridRow rowlabel="A" />
-        <GridRow rowlabel="B" />
-        <GridRow rowlabel="C" />
+        <GridRow rowlabel="A" row={this.state.rows[0]} />
+        <GridRow rowlabel="B" row={this.state.rows[1]} />
+        <GridRow rowlabel="C" row={this.state.rows[2]} />
         <SquareRowSeparator />
-        <GridRow rowlabel="D" />
-        <GridRow rowlabel="E" />
-        <GridRow rowlabel="F" />
+        <GridRow rowlabel="D" row={this.state.rows[3]} />
+        <GridRow rowlabel="E" row={this.state.rows[4]} />
+        <GridRow rowlabel="F" row={this.state.rows[5]} />
         <SquareRowSeparator />
-        <GridRow rowlabel="G" />
-        <GridRow rowlabel="H" />
-        <GridRow rowlabel="I" />
+        <GridRow rowlabel="G" row={this.state.rows[6]} />
+        <GridRow rowlabel="H" row={this.state.rows[7]} />
+        <GridRow rowlabel="I" row={this.state.rows[8]} />
+      </div>
+    );
+  }
+}
+
+class ResponseArea extends React.Component
+{
+  constructor(props) {
+    super(props);
+    this.state = {
+      game : props.game
+    };
+  }
+
+  render() {
+    return (
+      <div className="button rounded response-box"
+        >{this.state.game.getResponse()}</div>
+    );
+  }
+}
+
+class Game extends React.Component
+{
+  constructor(props) {
+    super(props);
+    const rows = new Array(9);
+    for(let i = 0; i < rows.length; i++) {
+      rows[i] = new Array(9);
+      for(let j = 0; j < rows[i].length; j++) {
+        rows[i][j] = {
+          value      : '',
+          updateCell : (val) => this.updateCell(i, j, val)
+        };
+      }
+    }
+    this.state = {
+      rows     : rows,
+      response : 'response'
+    };
+  }
+
+  updateCell(row, col, val) {
+    var rows = new Array(this.state.rows.length);
+    for(var i = 0; i < rows.length; i++) {
+      rows[i] = this.state.rows[i].slice();
+    }
+    rows[row][col] = {
+      value      : val,
+      updateCell : rows[row][col].updateCell,
+    };
+    this.setState({
+      rows     : rows,
+      response : this.state.response
+    });
+  }
+
+  getCellValue(row, col) {
+    return this.state.rows[row][col].value;
+  }
+
+  handleSolveClick() {
+    this.setState({
+      rows     : this.state.rows,
+      response : this.getCellValue(0, 0)
+    });
+  }
+
+  getResponse() {
+    return this.state.response;
+  }
+
+  render() {
+    return (
+      <div className="root-box blue-box">
+        <div className="pageHeaderTitle">Sudoku Solver</div>
+        <div style={{clear: 'both'}}></div>
+        <div className="mainContent">
+          <div className="left-box">
+            <Grid rows={this.state.rows} />
+          </div>
+          <div className="right-box">
+            <ButtonArea solveClick = {() => this.handleSolveClick()} />
+            <div style={{clear: 'both', height: '20px'}}></div>
+            <ResponseArea game = {this} />
+          </div>
+        </div>
       </div>
     );
   }
@@ -148,6 +252,9 @@ class ButtonArea extends React.Component
 {
   constructor(props) {
     super(props);
+    this.state = {
+      solveClick : props.solveClick
+    }
   }
 
   render() {
@@ -155,42 +262,11 @@ class ButtonArea extends React.Component
       <div className="buttonsContainer">
         <fieldset id="buttonArea">
           <legend id="buttonAreaLegend">Features</legend>
-          <div className = "button rounded">Solve</div>
+          <button className = "button rounded"
+               onClick   = {() => this.state.solveClick()} >Solve</button>
           <div style={{clear: 'both', height: '20px'}}></div>
           <div className = "button rounded">Clear</div>
         </fieldset>
-      </div>
-    );
-  }
-}
-
-class Game extends React.Component
-{
-  constructor(props) {
-    super(props);
-    var rows = new Array(9);
-    var i;
-    for(i = 0; i < rows.length; i++) {
-      rows[i] = new Array(9);
-      var j;
-      for(j = 0; j < rows[i].length; j++) {
-        rows[i][j] = new Cell();
-      }
-    }
-    this.state = {
-      rows : rows
-    };
-  }
-
-  render() {
-    return (
-      <div className="root-box blue-box">
-        <div className="pageHeaderTitle">Sudoku Solver</div>
-        <div style={{clear: 'both'}}></div>
-        <div className="mainContent">
-          <Grid />
-          <ButtonArea />
-        </div>
       </div>
     );
   }
