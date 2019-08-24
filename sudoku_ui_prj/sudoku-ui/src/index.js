@@ -52,20 +52,18 @@ class Cell extends React.Component
   constructor(props) {
     super(props);
     this.state = {
-      data  : props.data
+      row   : props.coordinate.row,
+      col   : props.coordinate.col,
+      game  : props.coordinate.game,
     };
     this.handleChange = this.handleChange.bind(this);
   }
 
   handleChange(event) {
     let newValue = event.target.value;
-    this.state.data.updateCell(newValue);
-    this.setState({
-      data: {
-        value       : newValue,
-        updateCell  : this.state.data.updateCell
-      }
-    });
+    let row = this.state.row;
+    let col = this.state.col;
+    this.state.game.updateCell(row, col, newValue);
   }
 
   render() {
@@ -73,14 +71,17 @@ class Cell extends React.Component
       <input className  = "gridCell inputcell"
              type       = "text"
              maxLength  = "1"
-             value      = {this.state.data.value}
+             value      = {this.getValue()}
              onChange   = {this.handleChange}>
       </input>
     );
   }
 
   getValue() {
-    return this.state.value;
+    const row  = this.state.row;
+    const col  = this.state.col;
+    const game = this.state.game;
+    return game.getCellValue(row, col);
   }
 }
 
@@ -104,18 +105,18 @@ class GridRow extends React.Component
   render() {
     return (
       <div className = "gridRow" >
-        <RowLabel label={this.state.rowlabel} />
-        <Cell data = {this.state.row[0]} />
-        <Cell data = {this.state.row[1]} />
-        <Cell data = {this.state.row[2]} />
+        <RowLabel label  = {this.state.rowlabel} />
+        <Cell coordinate = {this.state.row[0]} />
+        <Cell coordinate = {this.state.row[1]} />
+        <Cell coordinate = {this.state.row[2]} />
         <ColumnSeparator />
-        <Cell data = {this.state.row[3]} />
-        <Cell data = {this.state.row[4]} />
-        <Cell data = {this.state.row[5]} />
+        <Cell coordinate = {this.state.row[3]} />
+        <Cell coordinate = {this.state.row[4]} />
+        <Cell coordinate = {this.state.row[5]} />
         <ColumnSeparator />
-        <Cell data = {this.state.row[6]} />
-        <Cell data = {this.state.row[7]} />
-        <Cell data = {this.state.row[8]} />
+        <Cell coordinate = {this.state.row[6]} />
+        <Cell coordinate = {this.state.row[7]} />
+        <Cell coordinate = {this.state.row[8]} />
       </div>
     );
   }
@@ -136,7 +137,7 @@ class Grid extends React.Component
   constructor(props) {
     super(props);
     this.state = {
-      rows: props.rows
+      coordinates: props.coordinates
     };
   }
 
@@ -145,17 +146,17 @@ class Grid extends React.Component
       <div className="grid">
         <TitleRow />
         <RowSeparator />
-        <GridRow rowlabel="A" row={this.state.rows[0]} />
-        <GridRow rowlabel="B" row={this.state.rows[1]} />
-        <GridRow rowlabel="C" row={this.state.rows[2]} />
+        <GridRow rowlabel="A" row={this.state.coordinates[0]} />
+        <GridRow rowlabel="B" row={this.state.coordinates[1]} />
+        <GridRow rowlabel="C" row={this.state.coordinates[2]} />
         <SquareRowSeparator />
-        <GridRow rowlabel="D" row={this.state.rows[3]} />
-        <GridRow rowlabel="E" row={this.state.rows[4]} />
-        <GridRow rowlabel="F" row={this.state.rows[5]} />
+        <GridRow rowlabel="D" row={this.state.coordinates[3]} />
+        <GridRow rowlabel="E" row={this.state.coordinates[4]} />
+        <GridRow rowlabel="F" row={this.state.coordinates[5]} />
         <SquareRowSeparator />
-        <GridRow rowlabel="G" row={this.state.rows[6]} />
-        <GridRow rowlabel="H" row={this.state.rows[7]} />
-        <GridRow rowlabel="I" row={this.state.rows[8]} />
+        <GridRow rowlabel="G" row={this.state.coordinates[6]} />
+        <GridRow rowlabel="H" row={this.state.coordinates[7]} />
+        <GridRow rowlabel="I" row={this.state.coordinates[8]} />
       </div>
     );
   }
@@ -170,10 +171,14 @@ class ResponseArea extends React.Component
     };
   }
 
+  getResponse() {
+    return this.state.game.getResponse();
+  }
+
   render() {
     return (
       <div className="button rounded response-box"
-        >{this.state.game.getResponse()}</div>
+        >{this.getResponse()}</div>
     );
   }
 }
@@ -182,45 +187,91 @@ class Game extends React.Component
 {
   constructor(props) {
     super(props);
-    const rows = new Array(9);
-    for(let i = 0; i < rows.length; i++) {
-      rows[i] = new Array(9);
-      for(let j = 0; j < rows[i].length; j++) {
-        rows[i][j] = {
-          value      : '',
-          updateCell : (val) => this.updateCell(i, j, val)
-        };
-      }
-    }
+    const coordinates = this.createCellCoordinates();
+    const values = this.createClearCellValues();
+    const response = this.getInitialResponse();
     this.state = {
-      rows     : rows,
-      response : 'response'
+      coordinates   : coordinates,
+      values        : values,
+      response      : response
     };
   }
 
-  updateCell(row, col, val) {
-    var rows = new Array(this.state.rows.length);
-    for(var i = 0; i < rows.length; i++) {
-      rows[i] = this.state.rows[i].slice();
+  createClearCellValues() {
+    const values = new Array(9);
+    for(let i = 0; i < values.length; i++) {
+      values[i] = new Array(9);
+      for(let j = 0; j < values[i].length; j++) {
+        values[i][j] = '';
+      }
     }
-    rows[row][col] = {
-      value      : val,
-      updateCell : rows[row][col].updateCell,
+    return values;
+  }
+
+  createCellCoordinates() {
+    const coordinates = new Array(9);
+    for(let i = 0; i < coordinates.length; i++) {
+      coordinates[i] = new Array(9);
+      for(let j = 0; j < coordinates[i].length; j++) {
+        coordinates[i][j] = this.createCellCoordinate(i, j);
+      }
+    }
+    return coordinates;
+  }
+
+  createCellCoordinate(row, col) {
+    return {
+      row        : row,
+      col        : col,
+      game       : this
     };
+  }
+
+  getInitialResponse() {
+    return 'response';
+  }
+
+  cloneValues() {
+    const values = new Array(this.state.values.length);
+    for(let i = 0; i < values.length; i++) {
+      values[i] = new Array(this.state.values[i].length);
+      for(let j = 0; j < values[i].length; j++) {
+        values[i][j] = this.getCellValue(i, j);
+      }
+    }
+    return values;
+  }
+
+  updateCell(row, col, value) {
+    const values = this.cloneValues();
+    values[row][col] = value;
     this.setState({
-      rows     : rows,
-      response : this.state.response
+      values        : values,
+      coordinates   : this.state.coordinates,
+      response      : this.state.response
     });
   }
 
   getCellValue(row, col) {
-    return this.state.rows[row][col].value;
+    return this.state.values[row][col];
   }
 
   handleSolveClick() {
+    const response = this.getCellValue(0, 0);
     this.setState({
-      rows     : this.state.rows,
-      response : this.getCellValue(0, 0)
+      response      : response,
+      values        : this.state.values,
+      coordinates   : this.state.coordinates
+    });
+  }
+
+  handleClearClick() {
+    const values    = this.createClearCellValues();
+    const response  = this.getInitialResponse();
+    this.setState({
+      values        : values,
+      response      : response,
+      coordinates   : this.state.coordinates
     });
   }
 
@@ -235,10 +286,13 @@ class Game extends React.Component
         <div style={{clear: 'both'}}></div>
         <div className="mainContent">
           <div className="left-box">
-            <Grid rows={this.state.rows} />
+            <Grid coordinates={this.state.coordinates} />
           </div>
           <div className="right-box">
-            <ButtonArea solveClick = {() => this.handleSolveClick()} />
+            <ButtonArea
+              solveClick = {() => this.handleSolveClick()}
+              clearClick = {() => this.handleClearClick()}
+            />
             <div style={{clear: 'both', height: '20px'}}></div>
             <ResponseArea game = {this} />
           </div>
@@ -253,7 +307,8 @@ class ButtonArea extends React.Component
   constructor(props) {
     super(props);
     this.state = {
-      solveClick : props.solveClick
+      solveClick : props.solveClick,
+      clearClick : props.clearClick
     }
   }
 
@@ -262,10 +317,15 @@ class ButtonArea extends React.Component
       <div className="buttonsContainer">
         <fieldset id="buttonArea">
           <legend id="buttonAreaLegend">Features</legend>
-          <button className = "button rounded"
-               onClick   = {() => this.state.solveClick()} >Solve</button>
-          <div style={{clear: 'both', height: '20px'}}></div>
-          <div className = "button rounded">Clear</div>
+          <button
+            className = "button rounded"
+            onClick   = {() => this.state.solveClick()}
+            >Solve</button>
+          <div style ={{clear: 'both', height: '20px'}}></div>
+          <button
+            className = "button rounded"
+            onClick   = {() => this.state.clearClick()}
+            >Clear</button>
         </fieldset>
       </div>
     );
