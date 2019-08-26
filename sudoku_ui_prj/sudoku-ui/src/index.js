@@ -313,8 +313,8 @@ class Game extends React.Component
         throw new Error(response.statusText);
       }
     })
-    .then((responseJSON) => {
-      console.log("responseJSON.has_solution: " + responseJSON.has_solution);
+    .then((responseJson) => {
+      console.log("responseJson.has_solution: " + responseJson.has_solution);
     })
     .catch((error) => {
       console.error(error);
