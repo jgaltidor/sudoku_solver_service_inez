@@ -228,7 +228,7 @@ class Game extends React.Component
   }
 
   getInitialMessage() {
-    return 'message';
+    return 'Enter numbers [1-9] in the grid';
   }
 
   cloneValues() {
@@ -257,12 +257,29 @@ class Game extends React.Component
   }
 
   handleSolveClick() {
-    this.fetchSudokuSolution();
-    const message = this.getCellValue(0, 0);
-    this.setState({
-      message      : message,
-      values        : this.state.values,
-      coordinates   : this.state.coordinates
+    let inputBoardJSON = this.jsonOfBoard();
+    let inputBoardStr = JSON.stringify(inputBoardJSON);
+    console.log(inputBoardStr);
+    fetch(
+      'http://localhost:8080',
+      {
+        method  : 'post',
+        headers : { 'Content-Type': 'text/plain' },
+        body: inputBoardStr
+      }
+    )
+    .then((response) => {
+      if(response.ok) {
+        return response.json();
+      } else {
+        throw new Error(response.statusText);
+      }
+    })
+    .then((responseJson) => {
+      this.processSolverResponse(responseJson);
+    })
+    .catch((error) => {
+      console.error(error);
     });
   }
 
@@ -271,7 +288,7 @@ class Game extends React.Component
     const message  = this.getInitialMessage();
     this.setState({
       values        : values,
-      message      : message,
+      message       : message,
       coordinates   : this.state.coordinates
     });
   }
@@ -294,30 +311,32 @@ class Game extends React.Component
     return {'board': rows};
   }
 
-  fetchSudokuSolution() {
-    let inputBoardJSON = this.jsonOfBoard();
-    let inputBoardStr = JSON.stringify(inputBoardJSON);
-    console.log(inputBoardStr);
-    fetch(
-      'http://localhost:8080',
-      {
-        method  : 'post',
-        headers : { 'Content-Type': 'text/plain' },
-        body: inputBoardStr
+  valuesOfNums(board_of_nums) {
+    let values = new Array(board_of_nums.length);;
+    for(let i = 0; i < values.length; i++) {
+      values[i] = new Array(board_of_nums[i].length);
+      for(let j = 0; j < values[i].length; j++) {
+        values[i][j] = board_of_nums[i][j].toString();
       }
-    )
-    .then((response) => {
-      if(response.ok) {
-        return response.json();
-      } else {
-        throw new Error(response.statusText);
-      }
-    })
-    .then((responseJson) => {
-      console.log("responseJson.has_solution: " + responseJson.has_solution);
-    })
-    .catch((error) => {
-      console.error(error);
+    }
+    return values;
+  }
+
+  processSolverResponse(responseJson) {
+    let message = null;
+    let values = this.state.values;
+    if(responseJson.has_solution) {
+      let solution = responseJson.solved_board;
+      message = 'Solution Found!';
+      values = this.valuesOfNums(solution);
+    }
+    else {
+      message = 'No Solution Exists!'
+    }
+    this.setState({
+      values        : values,
+      message       : message,
+      coordinates   : this.state.coordinates
     });
   }
 
