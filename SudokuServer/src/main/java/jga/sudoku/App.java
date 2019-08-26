@@ -114,7 +114,12 @@ public class App extends NanoHTTPD
     try {
       String solverResults = runSolver();
       System.out.println(solverResults);
-      return newFixedLengthResponse(solverResults + "\n");
+      Response response = newFixedLengthResponse(
+        NanoHTTPD.Response.Status.OK,
+        NanoHTTPD.MIME_PLAINTEXT,
+        solverResults);
+      response.addHeader("Access-Control-Allow-Origin", "*");
+      return response;
     }
     catch(IOException e) {
       return newFixedLengthResponse(
