@@ -26,4 +26,11 @@ fetch('https://mywebsite.com/endpoint/', {
 });
 
 
+https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+
+"Simple requests" don’t trigger a CORS preflight
+(do not trigger HTTP OPTIONS request
+ when making an HTTP post request)
+
+https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
 
