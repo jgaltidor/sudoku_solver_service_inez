@@ -276,21 +276,26 @@ class Game extends React.Component
     });
   }
 
+  getCellNumber(row, col) {
+    let value = this.getCellValue(row, col);
+    let num = parseInt(value, 10);
+    if(num >= 1 && num <= 9) return num;
+    else return 0;
+  }
+
+  jsonOfBoard() {
+    let rows = new Array(this.state.values.length);;
+    for(let i = 0; i < rows.length; i++) {
+      rows[i] = new Array(this.state.values[i].length);
+      for(let j = 0; j < rows[i].length; j++) {
+        rows[i][j] = this.getCellNumber(i, j);
+      }
+    }
+    return {'board': rows};
+  }
+
   fetchSudokuSolution() {
-    let inputBoardJSON =
-      {
-        'board':
-          [[2, 0, 0,  0, 0, 0,  0, 0, 0],
-           [0, 0, 0,  0, 0, 0,  0, 0, 0],
-           [0, 0, 0,  0, 0, 0,  0, 0, 0],
-           [0, 0, 0,  0, 0, 0,  0, 0, 0],
-           [0, 0, 0,  0, 0, 0,  0, 0, 0],
-           [0, 0, 0,  0, 0, 0,  0, 0, 0],
-           [0, 0, 0,  0, 0, 0,  0, 0, 0],
-           [0, 0, 0,  0, 0, 0,  0, 0, 0],
-           [0, 0, 0,  0, 0, 0,  0, 0, 0]
-          ]
-      };
+    let inputBoardJSON = this.jsonOfBoard();
     let inputBoardStr = JSON.stringify(inputBoardJSON);
     console.log(inputBoardStr);
     fetch(
