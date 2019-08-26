@@ -73,6 +73,11 @@
   text-align        : center;
 }
 
+.computedcell {
+  color         : green;
+  font-weight   : bold;
+}
+
 .gridColumnSeparator {
   width    : 2px;
   height   : 1px;

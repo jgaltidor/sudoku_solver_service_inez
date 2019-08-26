@@ -52,9 +52,9 @@ class Cell extends React.Component
   constructor(props) {
     super(props);
     this.state = {
-      row   : props.coordinate.row,
-      col   : props.coordinate.col,
-      game  : props.coordinate.game,
+      row        : props.coordinate.row,
+      col        : props.coordinate.col,
+      game       : props.coordinate.game
     };
     this.handleChange = this.handleChange.bind(this);
   }
@@ -66,9 +66,19 @@ class Cell extends React.Component
     this.state.game.updateCell(row, col, newValue);
   }
 
+  isComputed() {
+    let row = this.state.row;
+    let col = this.state.col;
+    return this.state.game.isCellComputed(row, col);
+  }
+
   render() {
+    let styleClasses = "gridCell inputcell";
+    if(this.isComputed()) {
+      styleClasses = styleClasses + " computedcell";
+    }
     return (
-      <input className  = "gridCell inputcell"
+      <input className  = {styleClasses}
              type       = "text"
              maxLength  = "1"
              value      = {this.getValue()}
@@ -190,10 +200,12 @@ class Game extends React.Component
     const coordinates = this.createCellCoordinates();
     const values = this.createClearCellValues();
     const message = this.getInitialMessage();
+    const isComputedFlags = this.getInitialIsComputedFlags();
     this.state = {
-      coordinates   : coordinates,
-      values        : values,
-      message       : message
+      coordinates      : coordinates,
+      values           : values,
+      isComputedFlags  : isComputedFlags,
+      message          : message
     };
   }
 
@@ -231,6 +243,17 @@ class Game extends React.Component
     return 'Enter numbers [1-9] in the grid';
   }
 
+  getInitialIsComputedFlags() {
+    const flags = new Array(9);
+    for(let i = 0; i < flags.length; i++) {
+      flags[i] = new Array(9);
+      for(let j = 0; j < flags[i].length; j++) {
+        flags[i][j] = false;
+      }
+    }
+    return flags;
+  }
+
   cloneValues() {
     const values = new Array(this.state.values.length);
     for(let i = 0; i < values.length; i++) {
@@ -245,10 +268,12 @@ class Game extends React.Component
   updateCell(row, col, value) {
     const values = this.cloneValues();
     values[row][col] = value;
+    const isComputedFlags = this.getInitialIsComputedFlags();
     this.setState({
-      values        : values,
-      coordinates   : this.state.coordinates,
-      message      : this.state.message
+      values             : values,
+      isComputedFlags    : isComputedFlags,
+      coordinates        : this.state.coordinates,
+      message            : this.state.message
     });
   }
 
@@ -256,10 +281,13 @@ class Game extends React.Component
     return this.state.values[row][col];
   }
 
+  isCellComputed(row, col) {
+    return this.state.isComputedFlags[row][col];
+  }
+
   handleSolveClick() {
     let inputBoardJSON = this.jsonOfBoard();
     let inputBoardStr = JSON.stringify(inputBoardJSON);
-    console.log(inputBoardStr);
     fetch(
       'http://localhost:8080',
       {
@@ -285,11 +313,14 @@ class Game extends React.Component
 
   handleClearClick() {
     const values    = this.createClearCellValues();
+    const isComputedFlags = this.getInitialIsComputedFlags();
     const message  = this.getInitialMessage();
+    const coordinates = this.createCellCoordinates();
     this.setState({
-      values        : values,
-      message       : message,
-      coordinates   : this.state.coordinates
+      values          : values,
+      isComputedFlags : isComputedFlags,
+      message         : message,
+      coordinates     : coordinates
     });
   }
 
@@ -322,21 +353,40 @@ class Game extends React.Component
     return values;
   }
 
+  getNewIsComputedFlags(newValues) {
+    const flags = new Array(9);
+    for(let i = 0; i < flags.length; i++) {
+      flags[i] = new Array(9);
+      for(let j = 0; j < flags[i].length; j++) {
+        let isComputed = null;
+        let newValue = newValues[i][j];
+        let oldValue = this.getCellValue(i, j);
+        if(newValue === oldValue) isComputed = false;
+        else isComputed = true;
+        flags[i][j] = isComputed;
+      }
+    }
+    return flags;
+  }
+
   processSolverResponse(responseJson) {
     let message = null;
     let values = this.state.values;
+    let isComputedFlags = this.state.isComputedFlags;
     if(responseJson.has_solution) {
       let solution = responseJson.solved_board;
       message = 'Solution Found!';
       values = this.valuesOfNums(solution);
+      isComputedFlags = this.getNewIsComputedFlags(values);
     }
     else {
       message = 'No Solution Exists!'
     }
     this.setState({
-      values        : values,
-      message       : message,
-      coordinates   : this.state.coordinates
+      values             : values,
+      isComputedFlags    : isComputedFlags,
+      message            : message,
+      coordinates        : this.state.coordinates
     });
   }
 
