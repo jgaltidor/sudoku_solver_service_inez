@@ -162,7 +162,7 @@ class Grid extends React.Component
   }
 }
 
-class ResponseArea extends React.Component
+class MessageArea extends React.Component
 {
   constructor(props) {
     super(props);
@@ -171,14 +171,14 @@ class ResponseArea extends React.Component
     };
   }
 
-  getResponse() {
-    return this.state.game.getResponse();
+  getMessage() {
+    return this.state.game.getMessage();
   }
 
   render() {
     return (
-      <div className="button rounded response-box"
-        >{this.getResponse()}</div>
+      <div className="button rounded message-box"
+        >{this.getMessage()}</div>
     );
   }
 }
@@ -189,11 +189,11 @@ class Game extends React.Component
     super(props);
     const coordinates = this.createCellCoordinates();
     const values = this.createClearCellValues();
-    const response = this.getInitialResponse();
+    const message = this.getInitialMessage();
     this.state = {
       coordinates   : coordinates,
       values        : values,
-      response      : response
+      message       : message
     };
   }
 
@@ -227,8 +227,8 @@ class Game extends React.Component
     };
   }
 
-  getInitialResponse() {
-    return 'response';
+  getInitialMessage() {
+    return 'message';
   }
 
   cloneValues() {
@@ -248,7 +248,7 @@ class Game extends React.Component
     this.setState({
       values        : values,
       coordinates   : this.state.coordinates,
-      response      : this.state.response
+      message      : this.state.message
     });
   }
 
@@ -258,9 +258,9 @@ class Game extends React.Component
 
   handleSolveClick() {
     this.fetchSudokuSolution();
-    const response = this.getCellValue(0, 0);
+    const message = this.getCellValue(0, 0);
     this.setState({
-      response      : response,
+      message      : message,
       values        : this.state.values,
       coordinates   : this.state.coordinates
     });
@@ -268,10 +268,10 @@ class Game extends React.Component
 
   handleClearClick() {
     const values    = this.createClearCellValues();
-    const response  = this.getInitialResponse();
+    const message  = this.getInitialMessage();
     this.setState({
       values        : values,
-      response      : response,
+      message      : message,
       coordinates   : this.state.coordinates
     });
   }
@@ -321,8 +321,8 @@ class Game extends React.Component
     });
   }
 
-  getResponse() {
-    return this.state.response;
+  getMessage() {
+    return this.state.message;
   }
 
   render() {
@@ -340,7 +340,7 @@ class Game extends React.Component
               clearClick = {() => this.handleClearClick()}
             />
             <div style={{clear: 'both', height: '20px'}}></div>
-            <ResponseArea game = {this} />
+            <MessageArea game = {this} />
           </div>
         </div>
       </div>
