@@ -257,6 +257,7 @@ class Game extends React.Component
   }
 
   handleSolveClick() {
+    this.fetchSudokuSolution();
     const response = this.getCellValue(0, 0);
     this.setState({
       response      : response,
@@ -272,6 +273,46 @@ class Game extends React.Component
       values        : values,
       response      : response,
       coordinates   : this.state.coordinates
+    });
+  }
+
+  fetchSudokuSolution() {
+    let inputBoardJSON =
+      {
+        'board':
+          [[2, 0, 0,  0, 0, 0,  0, 0, 0],
+           [0, 0, 0,  0, 0, 0,  0, 0, 0],
+           [0, 0, 0,  0, 0, 0,  0, 0, 0],
+           [0, 0, 0,  0, 0, 0,  0, 0, 0],
+           [0, 0, 0,  0, 0, 0,  0, 0, 0],
+           [0, 0, 0,  0, 0, 0,  0, 0, 0],
+           [0, 0, 0,  0, 0, 0,  0, 0, 0],
+           [0, 0, 0,  0, 0, 0,  0, 0, 0],
+           [0, 0, 0,  0, 0, 0,  0, 0, 0]
+          ]
+      };
+    let inputBoardStr = JSON.stringify(inputBoardJSON);
+    console.log(inputBoardStr);
+    fetch(
+      'http://localhost:8080',
+      {
+        method  : 'post',
+        headers : { 'Content-Type': 'text/plain' },
+        body: inputBoardStr
+      }
+    )
+    .then((response) => {
+      if(response.ok) {
+        return response.json();
+      } else {
+        throw new Error(response.statusText);
+      }
+    })
+    .then((responseJSON) => {
+      console.log("responseJSON.has_solution: " + responseJSON.has_solution);
+    })
+    .catch((error) => {
+      console.error(error);
     });
   }
 
