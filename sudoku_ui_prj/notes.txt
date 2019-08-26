@@ -8,3 +8,22 @@ npm start
 Example Sudoku UI:
 
 https://www.sudoku-solutions.com/
+
+HTTP Request in ReactJS Example from
+https://facebook.github.io/react-native/docs/network
+(Slightly Modified Example):
+
+
+fetch('https://mywebsite.com/endpoint/', {
+  method: 'POST',
+  headers: {
+    headers : { 'Content-Type': 'text/plain' },
+  },
+  body: JSON.stringify({
+    firstParam: 'yourValue',
+    secondParam: 'yourOtherValue',
+  }),
+});
+
+
+
