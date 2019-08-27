@@ -69,13 +69,14 @@
 
 .inputcell {
   background-color  : white;
-  font-size         : 18px;
+  font-size         : 28px;
   text-align        : center;
+  font-weight       : bold;
+  color             : red;
 }
 
 .computedcell {
   color         : green;
-  font-weight   : bold;
 }
 
 .gridColumnSeparator {
@@ -161,11 +162,11 @@
   box-shadow          : none;
   border              : none;
   background-color    : #194972;
-  color               : red;
+  color               : orangered;
   margin-left         : 20px;
   height              : 40px;
   line-height         : 40px;
-  font-size           : 20px;
+  font-size           : 24px;
   width               : 150px;
   height              : 40px;
 }
