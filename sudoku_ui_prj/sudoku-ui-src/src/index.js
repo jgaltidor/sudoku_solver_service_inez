@@ -286,6 +286,7 @@ class Game extends React.Component
   }
 
   handleSolveClick() {
+    this.updateMessage("Solving...");
     let inputBoardJSON = this.jsonOfBoard();
     let inputBoardStr = JSON.stringify(inputBoardJSON);
     fetch(
@@ -308,6 +309,15 @@ class Game extends React.Component
     })
     .catch((error) => {
       console.error(error);
+    });
+  }
+
+  updateMessage(newMessage) {
+    this.setState({
+      message         : newMessage,
+      values          : this.state.values,
+      isComputedFlags : this.state.isComputedFlags,
+      coordinates     : this.state.coordinates,
     });
   }
 
