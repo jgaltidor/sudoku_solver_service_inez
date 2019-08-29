@@ -1,0 +1,2 @@
+docker tag sudoku_solver_service_inez jgaltidor/sudoku_solver_service_inez
+docker push jgaltidor/sudoku_solver_service_inez

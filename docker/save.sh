@@ -1,0 +1,2 @@
+docker save --output sudoku_solver_service_inez.tar jgaltidor/sudoku_solver_service_inez
+gzip sudoku_solver_service_inez.tar
