@@ -10,8 +10,8 @@ WORKDIR $HOME
 
 USER root
 
-# Copy the app directory contents into the container at /app
-COPY app ${HOME}/app
+# Copy this directory contents into the container at directory /app
+COPY . ${HOME}/app
 
 RUN chown -R john:john ${HOME}/app
 
