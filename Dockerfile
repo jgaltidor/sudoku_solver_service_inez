@@ -91,7 +91,7 @@ RUN  eval `opam config env` && \
        omake frontend/inez.opt && \
        omake frontend/inez.top
 
-ARG SUDOKU_SERVICE=${HOME}/app/sudoku_solver_service_inez
+ARG SUDOKU_SERVICE=${HOME}/app
 
 # Build sudoku_solver_inez
 
