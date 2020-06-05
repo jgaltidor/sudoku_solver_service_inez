@@ -65,7 +65,7 @@ RUN eval `opam config env` && \
 
 # Build SCIP libary. Inez depends on SCIP
 
-ARG SCIP=${HOME}/app/scipoptsuite-3.1.1
+ARG SCIP=${HOME}/app/libs/scipoptsuite-3.1.1
 
 WORKDIR ${SCIP}
 
@@ -83,7 +83,7 @@ ENV LD_LIBRARY_PATH ${SCIP}/lib
 
 # Build Inez
 
-ARG INEZ=${HOME}/app/inez
+ARG INEZ=${HOME}/app/libs/inez
 
 WORKDIR ${INEZ}
 
