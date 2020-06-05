@@ -120,7 +120,9 @@ RUN npx create-react-app sudoku-ui && \
 
 WORKDIR ${SUDOKU_UI}/sudoku-ui
 
+RUN npm install
 RUN npm install fetch
+RUN npm audit fix
 
 WORKDIR ${SUDOKU_SERVICE}
 
