@@ -8,15 +8,11 @@
 	<version>1.0-SNAPSHOT</version>
 	<name>SudokuServer</name>
 	<url>http://maven.apache.org</url>
-	<properties>
-	  <maven.compiler.source>1.7</maven.compiler.source>
-	  <maven.compiler.target>1.7</maven.compiler.target>
-	</properties>
 	<dependencies>
 		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
-			<version>4.13.1</version>
+			<version>4.13.2</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
@@ -34,7 +30,17 @@
 	<build>
 		<plugins>
 			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.12.1</version>
+				<configuration>
+					<release>11</release> <!-- Use Java 11 -->
+				</configuration>
+			</plugin>
+			<plugin>
 				<artifactId>maven-assembly-plugin</artifactId>
+				<groupId>org.apache.maven.plugins</groupId>
+				<version>3.6.0</version>
 				<configuration>
 					<archive>
 						<manifest>

@@ -10,6 +10,8 @@ WORKDIR $HOME
 
 USER root
 
+SHELL ["/bin/bash", "-i", "-l", "-c"]
+
 # Copy this directory contents into the container at directory /app
 COPY . ${HOME}/app
 
@@ -20,29 +22,90 @@ RUN chown -R john:john ${HOME}/app
 # symbolic link if tzdata is not installed
 
 # Install software dependencies
-RUN apt-get -y update && apt-get -y install \
+RUN apt-get -y update && apt-get -y install --no-install-recommends \
   tzdata \
   ocaml \
   opam \
   ocaml-native-compilers \
+  camlp4-extra \
   m4 \
   libboost-all-dev \
   wget \
   git \
   emacs \
   rlwrap \
-  default-jdk \
-  maven \
   curl
+
+# Install Java 11
+
+RUN apt-get install -y software-properties-common
+
+RUN add-apt-repository ppa:openjdk-r/ppa -y
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openjdk-11-jdk \
+    maven
+
+# Performing installs that don't require root permissions
+
+USER john
 
 # Install sudoku ui server dependency: Node.js/ReactJS
 
-RUN curl -sL https://deb.nodesource.com/setup_12.x | bash - && \
-    apt-get install -y nodejs
+# Install nvm package manager for installing Node.js/ReactJS
+
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.5/install.sh | bash
+
+# Install Node.js/ReactJS LTS version
+
+RUN nvm install 16
+
+ARG SUDOKU_SERVICE=${HOME}/app
+
+# Build Sudoku UI Server
+
+ARG SUDOKU_UI=${SUDOKU_SERVICE}/sudoku_ui_prj
+
+WORKDIR ${SUDOKU_UI}
+
+RUN npx -y create-react-app sudoku-ui --legacy-peer-deps --no-progress 2>&1 | grep -v "deprecated\|react.dev"
+
+RUN cp -r sudoku-ui-src/* sudoku-ui/. && \
+      cd sudoku-ui && \
+      npm install && \
+      npm install fetch && \
+      npm audit fix || true
+
+# Build Sudoku Server
+
+ARG SUDOKU_SERVER=${SUDOKU_SERVICE}/SudokuServer
+
+WORKDIR ${SUDOKU_SERVER}
+
+RUN mvn package
 
 # Install Inez dependencies
 
-USER john
+# Build SCIP libary. Inez depends on SCIP
+
+ARG SCIP=${HOME}/app/libs/scipoptsuite-3.1.1
+ARG SCIP_LIB=${SCIP}/lib
+
+WORKDIR ${SCIP}
+
+RUN make scipoptlib \
+      SHARED=true \
+      READLINE=false \
+      ZLIB=false \
+      GMP=false \
+      ZIMPL=false && \
+    ln -s \
+      ${SCIP_LIB}/libscipopt-3.1.1.linux.x86_64.gnu.opt.so \
+      ${SCIP_LIB}/libscipopt.so
+
+ENV LD_LIBRARY_PATH ${SCIP_LIB}
+
+# Install OCaml dependencies
 
 RUN opam init --yes --auto-setup && \
   eval `opam config env` && \
@@ -63,23 +126,6 @@ RUN eval `opam config env` && \
     sexplib \
     yojson
 
-# Build SCIP libary. Inez depends on SCIP
-
-ARG SCIP=${HOME}/app/libs/scipoptsuite-3.1.1
-
-WORKDIR ${SCIP}
-
-RUN make scipoptlib \
-      SHARED=true \
-      READLINE=false \
-      ZLIB=false \
-      GMP=false \
-      ZIMPL=false && \
-    ln -s \
-      ${SCIP}/lib/libscipopt-3.1.1.linux.x86_64.gnu.opt.so \
-      ${SCIP}/lib/libscipopt.so
-
-ENV LD_LIBRARY_PATH ${SCIP}/lib
 
 # Build Inez
 
@@ -91,38 +137,15 @@ RUN  eval `opam config env` && \
        omake frontend/inez.opt && \
        omake frontend/inez.top
 
-ARG SUDOKU_SERVICE=${HOME}/app
 
 # Build sudoku_solver_inez
+
 
 ARG SUDOKU_INEZ=${SUDOKU_SERVICE}/sudoku_solver_inez
 
 WORKDIR ${SUDOKU_INEZ}/src
 
 RUN eval `opam config env` && omake
-
-# Build Sudoku Server
-
-ARG SUDOKU_SERVER=${SUDOKU_SERVICE}/SudokuServer
-
-WORKDIR ${SUDOKU_SERVER}
-
-RUN mvn package
-
-# Build Sudoku UI Server
-
-ARG SUDOKU_UI=${SUDOKU_SERVICE}/sudoku_ui_prj
-
-WORKDIR ${SUDOKU_UI}
-
-RUN npx create-react-app sudoku-ui && \
-    cp -r sudoku-ui-src/* sudoku-ui/.
-
-WORKDIR ${SUDOKU_UI}/sudoku-ui
-
-RUN npm install
-RUN npm install fetch
-RUN npm audit fix
 
 WORKDIR ${SUDOKU_SERVICE}
 
@@ -133,6 +156,8 @@ EXPOSE 3000
 EXPOSE 8080
 
 ENV SUDOKU_SERVICE=$SUDOKU_SERVICE
+
+ENV SKIP_PREFLIGHT_CHECK=true
 
 # Launch Sudoku Web Services
 # ENTRYPOINT ${SUDOKU_SERVICE}/run.sh
