@@ -1,0 +1,309 @@
+open build/C
+open build/OCaml
+
+BYTE_ENABLED = true
+NATIVE_ENABLED = true
+OCAMLFLAGS += -thread -unsafe -safe-string
+OCAMLOPTFLAGS += -inline 30
+# OCAMLOPTFLAGS += -g
+USE_OCAMLFIND = true
+OCAMLPACKS = core camlidl
+INCLUDES = $(CAMLIDL_INCLUDE_PATH) $(OCAML_INCLUDE_PATH)
+
+CFLAGS += -O3
+
+OCAMLDEP_MODULES_ENABLED = true
+
+OCAML_CLIBS = ../backend/libbct
+
+OCAML_BYTE_LINK_FLAGS = -custom
+OCAML_LINK_FLAGS = -linkpkg \
+        -ccopt -L$(SCIP_LIB_DIR) \
+        -cclib -lcamlidl -cclib -lscipopt -cclib -lstdc++
+
+private.EXT_COBJ = .o
+
+private.CMI_FILES_EMBED = terminology.cmi type.cmi formula.cmi	\
+    logic.cmi axiom.cmi script.cmi id_for_scripts.cmi
+
+private.CMI_FILES_EMBED_DB = terminology.cmi type.cmi formula.cmi	\
+     db_logic_intf.cmi db_logic.cmi db_script.cmi id_for_scripts.cmi	\
+     db_smt_script.cmi db_eager_script.cmi
+
+scip_idl.ml scip_idl.mli scip_idl.h scip_idl_stubs.c: scip_idl.idl
+    camlidl -header scip_idl.idl
+
+# recipe from
+#   http://www.camlcity.org/knowledge/kb_001_omake_recipes.html
+
+Camlp4o(module) =
+    section
+        OCAMLPACKS += camlp4
+        OCAMLDEPFLAGS += -pp camlp4of.opt
+        OCAMLFLAGS += -pp camlp4of.opt
+        $(module).cmi:
+        $(module).cmo:
+        $(module).o:
+        $(module).cmx:
+
+Camlp4o_lib(module, libs, pa_names) =
+    section
+        OCAMLPACKS += camlp4
+        private.PA_CMD = \
+            "camlp4of \
+                 $(add-wrapper -I `ocamlfind query , `, $(libs)) \
+                 $(add-wrapper pa_, .cma, $(pa_names))"
+        OCAMLDEPFLAGS += -pp $(PA_CMD)
+        OCAMLFLAGS += -pp $(PA_CMD)
+        $(module).cmi:
+        $(module).cmo:
+        $(module).o:
+        $(module).cmx:
+
+Camlp4o_nopacks(module) =
+    section
+        OCAMLPACKS = camlp4
+        OCAMLDEPFLAGS += -pp camlp4of.opt
+        OCAMLFLAGS += -pp camlp4of.opt
+        $(module).cmi:
+        $(module).cmo:
+        $(module).o:
+        $(module).cmx:
+
+Reset_cflags(file) =
+    section
+        CFLAGS =
+        $(file).o: $(file).c
+
+Extra_pack(module, pkg) =
+    section
+        OCAMLPACKS += $(pkg)
+        $(module).cmi:
+        $(module).cmo:
+        $(module).o:
+        $(module).cmx:
+
+# I copied the function below from OCaml.om, and extended it to link
+# against .o files generated from .c sources. I also reordered
+# parameters to ocamlopt: $(OCAML_LINK_FLAGS) should be after
+# $(COFILES) .
+
+public.MyOCamlProgram(name, files, cfiles) =
+
+    private.CMOFILES = $(addsuffix .cmo, $(files))
+    private.CMXFILES = $(addsuffix .cmx, $(files))
+    private.OFILES = $(addsuffix $(EXT_OBJ), $(files))
+
+    private.COFILES = $(addsuffix $(EXT_COBJ), $(cfiles))
+
+    private.CMAFILES = $(addsuffix .cma,  $(OCAML_LIBS))
+    private.CMXAFILES = $(addsuffix .cmxa, $(OCAML_LIBS))
+    private.ARFILES = $(addsuffix $(EXT_LIB), $(OCAML_LIBS))
+    private.CMA_OTHER_FILES = $(addsuffix .cma, $(OCAML_OTHER_LIBS))
+    private.CMXA_OTHER_FILES = $(addsuffix .cmxa, $(OCAML_OTHER_LIBS))
+
+    private.CLIBS = $(addsuffix $(EXT_LIB), $(OCAML_CLIBS))
+
+    private.name = $(file $(name))
+
+    private.PROG = $(file $(name)$(EXE))
+    private.BYTEPROG = $(file $(name).run)
+    private.OPTPROG = $(file $(name).opt)
+
+    #
+    # Rules to build byte-code and native targets
+    #
+    $(BYTEPROG): $(CMAFILES) $(CMOFILES) $(CLIBS) $(COFILES)
+        $(OCAMLFIND) $(OCAMLLINK) $(LAZY_OCAMLFINDFLAGS)		\
+                $(PREFIXED_OCAMLPACKS) $(OCAMLFLAGS) $(OCAMLCFLAGS)	\
+                $(PREFIXED_OCAMLINCLUDES) -o $@ $(CMA_OTHER_FILES)	\
+                $(CMAFILES) $(OCamlLinkSort $(CMOFILES)) $(COFILES)	\
+                $(CLIBS) $(OCAML_LINK_FLAGS) $(OCAML_BYTE_LINK_FLAGS)
+
+    $(OPTPROG): $(CMXAFILES) $(ARFILES) $(CMXFILES) $(OFILES) $(CLIBS) \
+            $(COFILES)
+        $(OCAMLFIND) $(OCAMLOPTLINK) $(LAZY_OCAMLFINDFLAGS)		\
+                $(PREFIXED_OCAMLPACKS) $(OCAMLFLAGS) $(OCAMLOPTFLAGS)	\
+                $(PREFIXED_OCAMLINCLUDES) -o $@ $(CMXA_OTHER_FILES)	\
+                $(CMXAFILES) $(COFILES) $(OCamlLinkSort $(CMXFILES))	\
+                $(CLIBS) $(OCAML_LINK_FLAGS)				\
+                $(OCAML_NATIVE_LINK_FLAGS)
+
+    #
+    # Link the actual executables.
+    # Always prefer native executables.
+    #
+    if $(NATIVE_ENABLED)
+        $(PROG): $(OPTPROG)
+            ln-or-cp $< $@
+    else
+        $(PROG): $(BYTEPROG)
+            ln-or-cp $< $@
+
+    return $(array $(PROG), \
+                   $(if $(NATIVE_ENABLED), $(OPTPROG)), \
+                   $(if $(BYTE_ENABLED), $(BYTEPROG)))
+
+public.OCamlCMXS(name, files) =
+
+    private.CMX_FILES = $(addsuffix .cmx, $(files))
+
+    private.LIB = $(file $(name).cmxs)
+
+    $(LIB): $(CMX_FILES)
+        $(OCAMLFIND) $(OCAMLOPTLINK) $(LAZY_OCAMLFINDFLAGS)		\
+                $(OCAMLFLAGS) $(OCAMLOPTFLAGS)				\
+                $(PREFIXED_OCAMLINCLUDES) -o $@ $(OCamlLinkSort $+)	\
+                -shared $(OCAML_NATIVE_LINK_FLAGS)
+
+    return $(LIB)
+
+public.OCamlTop(name, files, cfiles) =
+
+    private.CMOFILES = $(addsuffix .cmo, $(files))
+    private.OFILES = $(addsuffix $(EXT_OBJ), $(files))
+
+    private.COFILES = $(addsuffix $(EXT_COBJ), $(cfiles))
+
+    private.CMAFILES = $(addsuffix .cma,  $(OCAML_LIBS))
+    private.ARFILES = $(addsuffix $(EXT_LIB), $(OCAML_LIBS))
+    private.CMA_OTHER_FILES = $(addsuffix .cma, $(OCAML_OTHER_LIBS))
+
+    private.CLIBS = $(addsuffix $(EXT_LIB), $(OCAML_CLIBS))
+    private.OCAMLPACKS = $(filter-out camlp4%, $(OCAMLPACKS))
+    private.PREFIXED_OCAMLPACKS =\
+        $`(if $(and $(USE_OCAMLFIND) $(gt $(length $(OCAMLPACKS)), 0)),\
+            -package $(string $(concat \,, $(OCAMLPACKS))),\
+            $(EMPTY))
+
+    private.name = $(file $(name))
+    private.PROG = $(file $(name).top)
+
+    # FIXME: hardcoded dynlink.cma and camlp4o.cma
+
+    $(PROG): $(CMAFILES) $(CMOFILES) $(CLIBS) $(COFILES)
+        $(OCAMLFIND) $(OCAMLMKTOP) $(LAZY_OCAMLFINDFLAGS) dynlink.cma	\
+        -I +camlp4 camlp4of.cma $(PREFIXED_OCAMLPACKS) $(OCAMLFLAGS)	\
+        $(OCAMLCFLAGS) $(PREFIXED_OCAMLINCLUDES) -o $@			\
+        $(CMA_OTHER_FILES) $(CMAFILES) $(OCamlLinkSort $(CMOFILES))	\
+        $(COFILES) $(CLIBS) $(OCAML_LINK_FLAGS)				\
+        $(OCAML_BYTE_LINK_FLAGS)
+
+    return $(PROG)
+
+libstdc++.a:
+    ln-or-cp $(shell gcc -print-file-name=libstdc++.a) libstdc++.a
+
+Camlp4o_lib(id, herelib, herelib)
+
+Camlp4o_lib(smtlib_printer, herelib, herelib)
+
+Camlp4o_lib(type, herelib type_conv comparelib sexplib, herelib	\
+                  type_conv compare sexp_conv)
+
+Camlp4o_lib(solver, herelib type_conv comparelib sexplib, herelib	\
+                    type_conv compare sexp_conv)
+
+Camlp4o_lib(pre, herelib type_conv comparelib sexplib, herelib	\
+            type_conv compare sexp_conv)
+
+Camlp4o_lib(scip, herelib, herelib)
+
+Camlp4o_lib(terminology, type_conv comparelib sexplib, type_conv	\
+                         compare sexp_conv)
+
+Camlp4o_lib(mem, herelib type_conv comparelib sexplib, herelib	\
+                 type_conv compare sexp_conv)
+
+Camlp4o_lib(db_solver, herelib, herelib)
+
+Camlp4o_lib(lt, herelib type_conv comparelib sexplib, herelib	\
+                type_conv compare sexp_conv)
+
+Camlp4o_lib(flat, type_conv comparelib sexplib, type_conv compare	\
+                  sexp_conv)
+
+Camlp4o_lib(axiom, type_conv comparelib sexplib, type_conv compare	\
+                  sexp_conv)
+
+Camlp4o_lib(flat, herelib type_conv comparelib sexplib, herelib	\
+            type_conv compare sexp_conv)
+
+OCamlCMXS(pa_logic, camlp4_maps pa_logic)
+
+OCamlCMXS(pa_db_logic, camlp4_maps pa_db_logic)
+
+Camlp4o_nopacks(camlp4_maps)
+
+Camlp4o_nopacks(pa_logic)
+
+Camlp4o_nopacks(pa_db_logic)
+
+Extra_pack(script_main, ocaml_plugin async)
+
+OCamlTop(inez, terminology unreachable scip_idl scip util formula	\
+         type id id_for_scripts logic camlp4_maps pa_logic pre flat	\
+         axiom solver script, native_utils scip_idl_stubs)
+
+MyOCamlProgram(inez-smt, terminology unreachable scip_idl scip util	\
+               formula type id id_for_scripts logic pre flat axiom	\
+               solver smtlib_lexer smtlib_parser smtlib_solver		\
+               smtlib_main, native_utils scip_idl_stubs)
+
+OCamlTop(inez-db, terminology unreachable scip_idl scip util formula	\
+         type id id_for_scripts logic db_logic camlp4_maps		\
+         pa_db_logic pre flat axiom solver bounds smtlib_printer mem	\
+         db_solver db_script, native_utils scip_idl_stubs)
+
+section
+
+    OCAMLPACKS += ocaml_plugin async
+
+    MyOCamlProgram(inez, terminology unreachable scip_idl scip util	\
+                   formula type id id_for_scripts logic pre flat	\
+                   axiom solver script script_main, native_utils	\
+                   scip_idl_stubs ocaml_embedded)
+
+    MyOCamlProgram(inez-db, terminology unreachable scip_idl scip	\
+                   util formula type id id_for_scripts logic db_logic	\
+                   pre flat axiom solver bounds smtlib_printer mem	\
+                   db_solver db_script db_smt_script db_eager_script	\
+                   script_main, native_utils scip_idl_stubs		\
+                   db_ocaml_embedded)
+
+ocaml_embedded.c: pa_logic.cmxs $(CMI_FILES_EMBED)
+        ocaml-embed-compiler \
+            -cc $(shell which ocamlopt.opt) \
+            -pp $(shell which camlp4o.opt) \
+            -pa-cmxs pa_logic.cmxs \
+            -o $@ \
+            $(shell ocamlfind printconf stdlib)/pervasives.cmi \
+            $(shell ocamlfind printconf stdlib)/camlinternalFormatBasics.cmi \
+            $(shell ocamlfind query core_kernel)/core_kernel.cmi \
+            $(shell ocamlfind query core)/core.cmi \
+            $(shell ocamlfind query ocaml_plugin)/ocaml_plugin.cmi \
+            $(CMI_FILES_EMBED)
+
+db_ocaml_embedded.c: pa_db_logic.cmxs $(CMI_FILES_EMBED_DB)
+        ocaml-embed-compiler \
+            -cc $(shell which ocamlopt.opt) \
+            -pp $(shell which camlp4o.opt) \
+            -pa-cmxs pa_db_logic.cmxs \
+            -o $@ \
+            $(shell ocamlfind printconf stdlib)/pervasives.cmi \
+            $(shell ocamlfind printconf stdlib)/camlinternalFormatBasics.cmi \
+            $(shell ocamlfind query core_kernel)/core_kernel.cmi \
+            $(shell ocamlfind query core)/core.cmi \
+            $(shell ocamlfind query ocaml_plugin)/ocaml_plugin.cmi \
+            $(CMI_FILES_EMBED_DB)
+
+Reset_cflags(ocaml_embedded)
+
+Reset_cflags(db_ocaml_embedded)
+
+.PHONY: clean
+
+clean:
+    rm -f *.o *.cm[iox] *.cmxs smtlib_lexer.ml inez *.opt *.top *.omc	\
+    scip_idl.ml scip_idl.mli scip_idl.h					\
+    scip_idl_stubs.c *ocaml_embedded.c libstdc++.a
