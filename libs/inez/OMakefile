@@ -1,8 +1,0 @@
-open OMakefile.config
-
-.PHONY: all install clean
-
-.SUBDIRS: frontend backend
-
-clean:
-    rm -f *.omc

@@ -1,0 +1,3 @@
+[submodule "libs/inez"]
+	path = libs/inez
+	url = https://github.com/vasilisp/inez.git
