@@ -100,10 +100,12 @@ its own pre-flight requirements check). `patchelf` itself has to be pre-patched 
 glibc *before* being copied into the final image, since it can't run under xenial's system glibc either.
 
 `devcontainer.json` mounts the live repo directly over `/home/john/app` (where the image was built)
-instead of the default `/workspaces/<name>`, and `remoteUser` is `john` (root has no opam switch). Two
-named volumes protect `libs/inez` and `libs/scipoptsuite-3.1.1` from being shadowed by that live bind
-mount — those directories hold compiled artifacts (`inez.top`/`inez.opt`, `libscipopt.so`) that only exist
-inside the pre-built image, not in a fresh git checkout. A `postStartCommand` reruns `omake` in
+instead of the default `/workspaces/<name>`, and `remoteUser` is `john` (root has no opam switch). Three
+named volumes protect `libs/inez`, `libs/scipoptsuite-3.1.1`, and `sudoku_ui_prj/sudoku-ui-src/
+node_modules` from being shadowed by that live bind mount — those paths hold build output
+(`inez.top`/`inez.opt`, `libscipopt.so`, installed npm packages) that only exists inside the pre-built
+image, not in a fresh git checkout; unlike `sudoku_solver_inez/src`'s `sudoku.cma` below, none of them
+need rebuilding on every start, just seeding once. A `postStartCommand` reruns `omake` in
 `sudoku_solver_inez/src` on every container start so edits there take effect immediately.
 
 ## Notes

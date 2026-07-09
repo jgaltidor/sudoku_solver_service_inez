@@ -17,19 +17,24 @@
   "workspaceMount": "source=${localWorkspaceFolder},target=/home/john/app,type=bind,consistency=cached",
   "workspaceFolder": "/home/john/app",
 
-  // libs/inez and libs/scipoptsuite-3.1.1 contain compiled build output
-  // (inez.top/inez.opt, libscipopt.so) produced while building the image,
-  // not present in the plain host source tree. Mount these two paths as
-  // named volumes -- Docker seeds a new empty volume from the image's
-  // content at that path on first use -- so the bind mount above doesn't
-  // shadow the compiled output with the (unbuilt) host copy.
+  // libs/inez, libs/scipoptsuite-3.1.1, and sudoku_ui_prj/sudoku-ui-src/
+  // node_modules all contain build output produced while building the image
+  // (inez.top/inez.opt, libscipopt.so, installed npm packages) that isn't
+  // present in the plain host source tree. Mount these paths as named
+  // volumes -- Docker seeds a new empty volume from the image's content at
+  // that path on first use -- so the bind mount above doesn't shadow the
+  // build output with the (unbuilt) host copy. Unlike sudoku_solver_inez/src's
+  // sudoku.cma below, none of these need rebuilding on every container
+  // start, only seeding once.
   //
-  // If you change libs/inez or libs/scipoptsuite-3.1.1 and rebuild the
-  // image, delete these two volumes so they get reseeded from the new build
-  // (otherwise the old compiled output persists in the volume).
+  // If you change libs/inez, libs/scipoptsuite-3.1.1, or sudoku-ui-src's
+  // package.json and rebuild the image, delete the corresponding volume so
+  // it gets reseeded from the new build (otherwise the old build output
+  // persists in the volume).
   "mounts": [
     "source=sudoku-solver-inez-libs-inez,target=/home/john/app/libs/inez,type=volume",
-    "source=sudoku-solver-inez-libs-scip,target=/home/john/app/libs/scipoptsuite-3.1.1,type=volume"
+    "source=sudoku-solver-inez-libs-scip,target=/home/john/app/libs/scipoptsuite-3.1.1,type=volume",
+    "source=sudoku-solver-inez-ui-node-modules,target=/home/john/app/sudoku_ui_prj/sudoku-ui-src/node_modules,type=volume"
   ],
 
   // sudoku_solver_inez/src's own OMakefile builds a "sudoku" OCaml library
