@@ -91,6 +91,12 @@ RUN mvn package
 ARG SCIP=${HOME}/app/libs/scipoptsuite-3.1.1
 ARG SCIP_LIB=${SCIP}/lib
 
+# libs/scipoptsuite-3.1.1 is tracked as a single archive (libs/scipoptsuite-3.1.1.tgz)
+# rather than an extracted tree. Extract it here; its own Makefile in turn
+# auto-extracts the nested scip-3.1.1/soplex-2.0.1/zimpl-3.3.2 archives it
+# contains on demand when "make scipoptlib" runs below.
+RUN tar xzf ${HOME}/app/libs/scipoptsuite-3.1.1.tgz -C ${HOME}/app/libs
+
 WORKDIR ${SCIP}
 
 RUN make scipoptlib \
