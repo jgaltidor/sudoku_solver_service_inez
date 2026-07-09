@@ -1,0 +1,11 @@
+# OMake / OCaml build artifacts
+*.cmi
+*.cmo
+*.cmx
+*.cma
+*.cmxa
+*.o
+*.a
+*.omc
+.omakedb
+.omakedb.lock
