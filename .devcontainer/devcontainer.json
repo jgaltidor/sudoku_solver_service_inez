@@ -28,13 +28,17 @@
   },
 
   // The frontend (Vite dev server, started manually via `npm start` in
-  // sudoku_ui_prj/sudoku-ui-src) listens on 3000. Forward it so VS Code
-  // auto-detects it and offers to open it in a browser instead of requiring
-  // a manual forward from the Ports panel.
-  "forwardPorts": [3000],
+  // sudoku_ui_prj/sudoku-ui-src) listens on 3000; the backend (SudokuServer,
+  // started manually via `run.sh`) listens on 8080. Forward both so VS Code
+  // auto-detects them and offers to open them in a browser instead of
+  // requiring a manual forward from the Ports panel.
+  "forwardPorts": [3000, 8080],
   "portsAttributes": {
     "3000": {
       "label": "Frontend (Vite dev server)"
+    },
+    "8080": {
+      "label": "Backend (SudokuServer API)"
     }
   },
 
