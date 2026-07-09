@@ -133,6 +133,12 @@ ARG INEZ=${HOME}/app/libs/inez
 
 WORKDIR ${INEZ}
 
+# libs/inez is a git submodule of github.com/vasilisp/inez, so its own
+# OMakefile.config (which has machine-specific paths, and is gitignored
+# upstream) isn't part of it. This repo tracks a copy pre-filled with the
+# paths this image actually uses (HOME=/home/john, opam's "system" switch).
+RUN cp ${HOME}/app/docker/inez-OMakefile.config ${INEZ}/OMakefile.config
+
 RUN  eval `opam config env` && \
        omake frontend/inez.opt && \
        omake frontend/inez.top
