@@ -1,10 +1,9 @@
 .git
 **/.git
 
-# Generated: fresh create-react-app scaffold + node_modules, recreated from
-# scratch by the Dockerfile itself (npx create-react-app sudoku-ui). Copying
-# the host's existing copy in wastes a lot of time for no benefit.
-sudoku_ui_prj/sudoku-ui/
+# Generated: node_modules, recreated from scratch by the Dockerfile itself
+# (npm install in sudoku-ui-src/). Copying the host's existing copy in wastes
+# a lot of time for no benefit.
 **/node_modules
 
 # Maven/Eclipse build output, rebuilt fresh by the Dockerfile's own

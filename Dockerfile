@@ -56,9 +56,9 @@ USER john
 
 RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.5/install.sh | bash
 
-# Install Node.js/ReactJS LTS version
+# Install Node.js/ReactJS LTS version (20+ required by Vite)
 
-RUN nvm install 16
+RUN nvm install 20
 
 ARG SUDOKU_SERVICE=${HOME}/app
 
@@ -66,15 +66,9 @@ ARG SUDOKU_SERVICE=${HOME}/app
 
 ARG SUDOKU_UI=${SUDOKU_SERVICE}/sudoku_ui_prj
 
-WORKDIR ${SUDOKU_UI}
+WORKDIR ${SUDOKU_UI}/sudoku-ui-src
 
-RUN npx -y create-react-app sudoku-ui --legacy-peer-deps --no-progress 2>&1 | grep -v "deprecated\|react.dev"
-
-RUN cp -r sudoku-ui-src/* sudoku-ui/. && \
-      cd sudoku-ui && \
-      npm install && \
-      npm install fetch && \
-      npm audit fix || true
+RUN npm install
 
 # Build Sudoku Server
 
@@ -168,8 +162,6 @@ EXPOSE 3000
 EXPOSE 8080
 
 ENV SUDOKU_SERVICE=$SUDOKU_SERVICE
-
-ENV SKIP_PREFLIGHT_CHECK=true
 
 # Launch Sudoku Web Services
 # ENTRYPOINT ${SUDOKU_SERVICE}/run.sh

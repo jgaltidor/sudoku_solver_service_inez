@@ -16,10 +16,11 @@ other over HTTP or via the filesystem — there is no shared build system or lib
   `sudoku_output.json`. The paths and port are configured in
   `SudokuServer/src/main/resources/sudoku_server.conf` (`solver_script_file`, `sudoku_config_file`,
   `sudoku_output_file`, `server_port=8080`).
-- **`sudoku_ui_prj`** (ReactJS): browser frontend. `sudoku_ui_prj/sudoku-ui-src/` is the real tracked
-  source (proxies to `localhost:8080`, see its `package.json`); `sudoku_ui_prj/sudoku-ui/` is a
-  disposable `create-react-app` scaffold with that source copied on top — never edit inside `sudoku-ui/`
-  directly, it gets regenerated from scratch by the build.
+- **`sudoku_ui_prj`** (ReactJS + Vite): browser frontend. `sudoku_ui_prj/sudoku-ui-src/` is the
+  self-contained tracked source and the actual project root (`package.json`, `vite.config.js`,
+  `index.html` all live there) — the Vite dev server proxies `/api` to `localhost:8080`, see
+  `vite.config.js`. There is no separate scaffold/build directory; `npm install` runs directly inside
+  `sudoku-ui-src/`.
 
 ## Build / run commands
 
@@ -37,10 +38,10 @@ mvn test                          # tests only
 bash run.sh                       # java -jar target/SudokuServer-1.0-SNAPSHOT-jar-with-dependencies.jar
 # Example manual request: see SudokuServer/requests/req1.sh, req2.sh, req3.sh
 
-# sudoku_ui_prj (React) - only sudoku-ui-src/ is meaningful to edit
-cd sudoku_ui_prj && bash build.sh   # scaffolds sudoku-ui/, overlays sudoku-ui-src/, npm install
-cd sudoku_ui_prj/sudoku-ui && npm start   # dev server on :3000
-npm test                                   # react-scripts test
+# sudoku_ui_prj (React + Vite)
+cd sudoku_ui_prj && bash build.sh          # npm install inside sudoku-ui-src/
+cd sudoku_ui_prj/sudoku-ui-src && npm start   # Vite dev server on :3000, proxies /api to :8080
+npm run build                              # production build to sudoku-ui-src/dist/
 
 # sudoku_solver_inez (OCaml, requires opam env + Inez/SCIP already built - see Devcontainer below)
 cd sudoku_solver_inez/src
@@ -59,8 +60,9 @@ The root `Dockerfile` is a single-stage `ubuntu:16.04` build, not multi-stage, a
 Inez (a research project, effectively unmaintained) and SCIP 3.1.1 (from 2014) need an old OCaml/camlp4/
 opam toolchain and old GCC/Boost ABI that later Ubuntu releases don't provide well. Don't "modernize" the
 base image without expecting to have to re-port the OCaml/C++ toolchain. The build, in order: apt (old
-system OCaml + camlp4 + opam + Boost), Java 11 + Maven, Node via nvm + `create-react-app`, `mvn package`,
-extract and build the SCIP Optimization Suite, `opam init` and pin **Jane Street Core 112.35.01** (old,
+system OCaml + camlp4 + opam + Boost), Java 11 + Maven, Node via nvm (20+, required by Vite) + `npm
+install` in `sudoku-ui-src/`, `mvn package`, extract and build the SCIP Optimization Suite, `opam init`
+and pin **Jane Street Core 112.35.01** (old,
 camlp4-based — do not casually bump this or the packages listed after it), build Inez, build
 `sudoku_solver_inez`.
 
@@ -78,9 +80,9 @@ Two vendored dependencies are intentionally *not* plain source trees in git:
   machine-specific paths and is gitignored *inside* the `vasilisp/inez` submodule itself). The
   `Dockerfile` copies it into place before building Inez — it can't live inside the submodule's own repo.
 
-`.dockerignore` matters here: without it, `COPY . ${HOME}/app` pulls in `sudoku_ui_prj/sudoku-ui/` (a
-disposable, `node_modules`-sized scaffold recreated from scratch by this very Dockerfile a few lines
-later) and can turn `chown -R` from milliseconds into 20+ minutes.
+`.dockerignore` matters here: without it, `COPY . ${HOME}/app` pulls in `sudoku_ui_prj/sudoku-ui-src/
+node_modules/` (recreated from scratch by this very Dockerfile a few lines later via `npm install`) and
+can turn `chown -R` from milliseconds into 20+ minutes.
 
 Because `sudoku_solver_inez/src/solver.ml`/`Inez`'s frontend uses Jane Street's `ocaml_plugin` to
 *dynamically compile OCaml source at request time* (not just at image-build time), the running container
