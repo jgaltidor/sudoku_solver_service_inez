@@ -1,0 +1,37 @@
+.git
+**/.git
+
+# Generated: fresh create-react-app scaffold + node_modules, recreated from
+# scratch by the Dockerfile itself (npx create-react-app sudoku-ui). Copying
+# the host's existing copy in wastes a lot of time for no benefit.
+sudoku_ui_prj/sudoku-ui/
+**/node_modules
+
+# Maven/Eclipse build output, rebuilt fresh by the Dockerfile's own
+# "mvn package" step.
+SudokuServer/target/
+.classpath
+.project
+.settings/
+
+# OMake/OCaml build artifacts, rebuilt fresh by the Dockerfile's own
+# omake/opam build steps.
+*.cmi
+*.cmo
+*.cmx
+*.cma
+*.cmxa
+*.o
+*.a
+*.omc
+.omakedb
+.omakedb.lock
+
+# Generated request/response payloads and misc local files, irrelevant to
+# the build. sudoku_solver_inez/src/sudoku_config.json is NOT listed here --
+# it's a tracked example/default input fixture, not generated.
+sudoku_output.json
+/sudoku_config.json
+/SudokuServer/sudoku_config.json
+/sudoku_solver_inez/src/output.json
+.DS_Store
