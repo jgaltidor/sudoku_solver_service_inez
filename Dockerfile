@@ -34,7 +34,12 @@ RUN apt-get -y update && apt-get -y install --no-install-recommends \
   git \
   emacs \
   rlwrap \
-  curl
+  curl \
+  less \
+  rsync \
+  openssh-client \
+  unzip \
+  ca-certificates
 
 # Install Java 11
 
