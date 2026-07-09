@@ -4,6 +4,29 @@
     "dockerfile": "Dockerfile"
   },
 
+  // One extension per language this repo actually contains:
+  // - vscjava.vscode-java-pack: Java + Maven support for SudokuServer
+  //   (redhat.java, Maven for Java, Debugger for Java, Test Runner for Java)
+  // - redhat.vscode-xml: XML support, e.g. SudokuServer/pom.xml
+  // - ocamllabs.ocaml-platform: OCaml Platform (Merlin-based) for
+  //   sudoku_solver_inez/src. This repo builds with omake + a pinned,
+  //   camlp4-based Jane Street Core (112.35.01) rather than dune/modern
+  //   ocaml-lsp-server, so full IntelliSense may not come up cleanly --
+  //   syntax highlighting and basic editing support still work.
+  // - dsznajder.es7-react-js-snippets: React/JSX snippets for
+  //   sudoku_ui_prj/sudoku-ui-src (JS/JSX language support itself is
+  //   already built into VS Code).
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "redhat.vscode-xml",
+        "ocamllabs.ocaml-platform",
+        "dsznajder.es7-react-js-snippets"
+      ]
+    }
+  },
+
   // The image is built as user "john" ($HOME=/home/john), and opam's env
   // (eval `opam config env`, used by sudoku_solver_inez/src/solver.sh) is
   // only set up under /home/john/.opam. Attaching as root would have no
