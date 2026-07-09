@@ -19,3 +19,8 @@ sudoku_output.json
 # top at Docker build time (see Dockerfile) -- sudoku-ui-src/ is the real
 # tracked source.
 /sudoku_ui_prj/sudoku-ui/
+
+# Eclipse IDE project metadata (auto-generated on import)
+.classpath
+.project
+.settings/
