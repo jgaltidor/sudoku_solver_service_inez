@@ -1,0 +1,27 @@
+# OMake / OCaml build artifacts
+*.cmi
+*.cmo
+*.cmx
+*.cma
+*.cmxa
+*.o
+*.a
+*.omc
+.omakedb
+.omakedb.lock
+
+# Generated request/response payloads (SudokuServer writes these per-request)
+sudoku_output.json
+/sudoku_config.json
+/SudokuServer/sudoku_config.json
+/sudoku_solver_inez/src/output.json
+
+# Generated: fresh create-react-app scaffold with sudoku-ui-src/ overlaid on
+# top at Docker build time (see Dockerfile) -- sudoku-ui-src/ is the real
+# tracked source.
+/sudoku_ui_prj/sudoku-ui/
+
+# Eclipse IDE project metadata (auto-generated on import)
+.classpath
+.project
+.settings/

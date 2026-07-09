@@ -1,1 +1,8 @@
-docker build -t sudoku_solver_service_inez .
+BASEDIR=$(dirname "$0")
+
+# libs/inez is a git submodule; a plain "git clone" of this repo leaves it
+# empty. "docker build"'s COPY brings in whatever is on disk, so make sure
+# it's actually populated first.
+git -C "$BASEDIR/.." submodule update --init --recursive
+
+docker build -t sudoku_solver_service_inez "$BASEDIR/.."

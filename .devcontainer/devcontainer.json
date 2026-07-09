@@ -1,0 +1,42 @@
+{
+  "name": "Sudoku Solver Container",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+
+  // The image is built as user "john" ($HOME=/home/john), and opam's env
+  // (eval `opam config env`, used by sudoku_solver_inez/src/solver.sh) is
+  // only set up under /home/john/.opam. Attaching as root would have no
+  // opam switch at all, so run_solver.sh needs this to be john.
+  "remoteUser": "john",
+
+  // Bind-mount the live repo directly over the path the image was built at
+  // ($HOME/app) instead of the default /workspaces/<name>, so live edits to
+  // e.g. sudoku_solver_inez/src land exactly where solver.sh's relative
+  // paths (../../libs/inez, ../../libs/scipoptsuite-3.1.1) expect them.
+  "workspaceMount": "source=${localWorkspaceFolder},target=/home/john/app,type=bind,consistency=cached",
+  "workspaceFolder": "/home/john/app",
+
+  // libs/inez and libs/scipoptsuite-3.1.1 contain compiled build output
+  // (inez.top/inez.opt, libscipopt.so) produced while building the image,
+  // not present in the plain host source tree. Mount these two paths as
+  // named volumes -- Docker seeds a new empty volume from the image's
+  // content at that path on first use -- so the bind mount above doesn't
+  // shadow the compiled output with the (unbuilt) host copy.
+  //
+  // If you change libs/inez or libs/scipoptsuite-3.1.1 and rebuild the
+  // image, delete these two volumes so they get reseeded from the new build
+  // (otherwise the old compiled output persists in the volume).
+  "mounts": [
+    "source=sudoku-solver-inez-libs-inez,target=/home/john/app/libs/inez,type=volume",
+    "source=sudoku-solver-inez-libs-scip,target=/home/john/app/libs/scipoptsuite-3.1.1,type=volume"
+  ],
+
+  // sudoku_solver_inez/src's own OMakefile builds a "sudoku" OCaml library
+  // (sudoku.cma) that solver.init loads at runtime. That compiled output is
+  // baked into the image but lives inside the plain bind-mounted workspace
+  // (unlike libs/inez and libs/scipoptsuite-3.1.1 above), so it gets shadowed
+  // by the host source on mount. Rebuild it (fast, ~1s, incremental) on every
+  // container start so run_solver.sh has an up-to-date sudoku.cma.
+  "postStartCommand": "bash -lc 'eval `opam config env` && cd ${containerWorkspaceFolder}/sudoku_solver_inez/src && omake'"
+}
