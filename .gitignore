@@ -9,3 +9,8 @@
 *.omc
 .omakedb
 .omakedb.lock
+
+# Generated request/response payloads (SudokuServer writes these per-request)
+sudoku_output.json
+/sudoku_config.json
+/SudokuServer/sudoku_config.json
