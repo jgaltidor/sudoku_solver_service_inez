@@ -1,2 +1,3 @@
-docker tag sudoku_solver_service_inez jgaltidor/sudoku_solver_service_inez
-docker push jgaltidor/sudoku_solver_service_inez
+BASEDIR=$(dirname "$0")
+
+docker compose -f "$BASEDIR/../docker-compose.yml" push

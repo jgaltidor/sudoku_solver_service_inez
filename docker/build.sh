@@ -5,4 +5,4 @@ BASEDIR=$(dirname "$0")
 # it's actually populated first.
 git -C "$BASEDIR/.." submodule update --init --recursive
 
-docker build -t sudoku_solver_service_inez "$BASEDIR/.."
+docker compose -f "$BASEDIR/../docker-compose.yml" build

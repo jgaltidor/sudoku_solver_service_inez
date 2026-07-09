@@ -56,25 +56,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 USER john
 
-# Install sudoku ui server dependency: Node.js/ReactJS
-
-# Install nvm package manager for installing Node.js/ReactJS
-
-RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.5/install.sh | bash
-
-# Install Node.js/ReactJS LTS version (20+ required by Vite)
-
-RUN nvm install 20
-
 ARG SUDOKU_SERVICE=${HOME}/app
-
-# Build Sudoku UI Server
-
-ARG SUDOKU_UI=${SUDOKU_SERVICE}/sudoku_ui_prj
-
-WORKDIR ${SUDOKU_UI}/sudoku-ui-src
-
-RUN npm install
 
 # Build Sudoku Server
 
@@ -159,19 +141,16 @@ WORKDIR ${SUDOKU_INEZ}/src
 
 RUN eval `opam config env` && omake
 
-WORKDIR ${SUDOKU_SERVICE}
-
-# Make SUDOKU_UI port 3000 available to the world outside this container
-EXPOSE 3000
+ENV SUDOKU_SERVICE=$SUDOKU_SERVICE
 
 # Make SUDOKU_SERVER port 8080 available to the world outside this container
 EXPOSE 8080
 
-ENV SUDOKU_SERVICE=$SUDOKU_SERVICE
+WORKDIR ${SUDOKU_SERVICE}/SudokuServer
 
-# Launch Sudoku Web Services
-# ENTRYPOINT ${SUDOKU_SERVICE}/run.sh
-
-# Run bash when the container launches
-# CMD ["bash"]
+# Launch Sudoku Web Services. cwd matters here: sudoku_server.conf's
+# solver_script_file (../sudoku_solver_inez/src/run_solver.sh) and its bare
+# sudoku_config.json/sudoku_output.json paths are resolved relative to the
+# JVM's working directory, not to SudokuServer.jar's own location.
+CMD ["./run.sh"]
 

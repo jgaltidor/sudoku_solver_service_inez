@@ -43,7 +43,12 @@
   // libs/inez, libs/scipoptsuite-3.1.1, and sudoku_ui_prj/sudoku-ui-src/
   // node_modules all contain build output produced while building the image
   // (inez.top/inez.opt, libscipopt.so, installed npm packages) that isn't
-  // present in the plain host source tree. Mount these paths as named
+  // present in the plain host source tree. The published backend image no
+  // longer installs Node itself (the frontend split into its own
+  // docker-compose service) -- node_modules here comes from this
+  // devcontainer's own Dockerfile, which layers Node/npm install on top of
+  // the backend image so this stays a single all-in-one dev container.
+  // Mount these paths as named
   // volumes -- Docker seeds a new empty volume from the image's content at
   // that path on first use -- so the bind mount above doesn't shadow the
   // build output with the (unbuilt) host copy. Unlike sudoku_solver_inez/src's

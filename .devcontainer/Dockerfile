@@ -21,7 +21,7 @@ RUN cp /usr/bin/patchelf /usr/local/bin/patchelf-portable && \
       /usr/local/bin/patchelf-portable
 
 # Your existing old base image
-FROM jgaltidor/sudoku_solver_service_inez:latest
+FROM jgaltidor/sudoku-solver-backend:latest
 
 USER root
 
@@ -37,3 +37,20 @@ COPY --from=vscode-glibc-sysroot /usr/local/bin/patchelf-portable /opt/vscode-gl
 ENV VSCODE_SERVER_CUSTOM_GLIBC_LINKER=/opt/vscode-glibc/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2
 ENV VSCODE_SERVER_CUSTOM_GLIBC_PATH=/opt/vscode-glibc/usr/lib/x86_64-linux-gnu
 ENV VSCODE_SERVER_PATCHELF_PATH=/opt/vscode-glibc/bin/patchelf
+
+# The published backend image no longer carries Node (the frontend build was
+# split into its own image/service, see docker-compose.yml), but this
+# devcontainer stays a single all-in-one dev container so Java/OCaml/React
+# can all be edited and run from one VS Code window. Layer Node on top here
+# instead -- this mirrors what the root Dockerfile used to do before the
+# split. The backend image's own "COPY . ${HOME}/app" still brings in the
+# (unbuilt) sudoku_ui_prj source, so there's nothing left to COPY here.
+USER john
+
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.5/install.sh | bash
+
+RUN bash -lc "nvm install 20"
+
+WORKDIR /home/john/app/sudoku_ui_prj/sudoku-ui-src
+
+RUN bash -lc "npm install"
