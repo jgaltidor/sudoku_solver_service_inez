@@ -14,3 +14,8 @@
 sudoku_output.json
 /sudoku_config.json
 /SudokuServer/sudoku_config.json
+
+# Generated: fresh create-react-app scaffold with sudoku-ui-src/ overlaid on
+# top at Docker build time (see Dockerfile) -- sudoku-ui-src/ is the real
+# tracked source.
+/sudoku_ui_prj/sudoku-ui/
