@@ -39,7 +39,8 @@ RUN apt-get -y update && apt-get -y install --no-install-recommends \
   rsync \
   openssh-client \
   unzip \
-  ca-certificates
+  ca-certificates \
+  dos2unix
 
 # Install Java 11
 
