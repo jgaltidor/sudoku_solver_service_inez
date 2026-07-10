@@ -39,18 +39,65 @@ ENV VSCODE_SERVER_CUSTOM_GLIBC_PATH=/opt/vscode-glibc/usr/lib/x86_64-linux-gnu
 ENV VSCODE_SERVER_PATCHELF_PATH=/opt/vscode-glibc/bin/patchelf
 
 # The published backend image no longer carries Node (the frontend build was
-# split into its own image/service, see docker-compose.yml), but this
-# devcontainer stays a single all-in-one dev container so Java/OCaml/React
-# can all be edited and run from one VS Code window. Layer Node on top here
-# instead -- this mirrors what the root Dockerfile used to do before the
-# split. The backend image's own "COPY . ${HOME}/app" still brings in the
-# (unbuilt) sudoku_ui_prj source, so there's nothing left to COPY here.
+# split into its own image/service, see docker-compose.yml). Modern Node
+# (18+, required by Vite) can't actually run on this xenial base at all --
+# its prebuilt binaries need glibc >= 2.27/2.28, same constraint as VS Code
+# Server above, and unlike VS Code Server there's no equivalent
+# patchelf-to-/opt/vscode-glibc trick that's worth the fragility here (Vite's
+# own dependency tree pulls in several more native binaries, e.g. esbuild/
+# rollup, that would each need the same patching). Instead of installing
+# Node here, give the container a Docker CLI so `docker compose up frontend`
+# (run from this devcontainer's own terminal, see devcontainer.json's socket
+# mount + postStartCommand) starts the frontend as a sibling container using
+# its own already -- and genuinely -- modern node:20 image.
+#
+# The official devcontainers "docker-outside-of-docker" feature would
+# normally handle this, but it refuses to run at all on xenial (its
+# apt-based moby/docker-ce install path only supports a fixed allowlist of
+# newer distro codenames -- xenial isn't in it, even with "moby": false).
+# Install the plain static docker CLI + compose plugin binaries instead --
+# they're statically linked Go binaries, so this xenial image's old glibc
+# doesn't matter here the way it does for Node.
+RUN curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-29.6.1.tgz \
+      -o /tmp/docker.tgz && \
+    tar -xzf /tmp/docker.tgz -C /tmp && \
+    mv /tmp/docker/docker /usr/local/bin/docker && \
+    rm -rf /tmp/docker.tgz /tmp/docker
+
+RUN mkdir -p /usr/local/lib/docker/cli-plugins && \
+    curl -fsSL https://github.com/docker/compose/releases/download/v5.3.1/docker-compose-linux-x86_64 \
+      -o /usr/local/lib/docker/cli-plugins/docker-compose && \
+    chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+
+# The host's docker.sock (mounted in by devcontainer.json) is owned by a
+# group whose GID varies per host/Docker install, so it can't be baked in
+# at image-build time -- devcontainer.json's postStartCommand matches john
+# into that group at container *start* time instead. That step needs root,
+# and postStartCommand runs as remoteUser (john); scope sudo to just the
+# commands that step actually runs, not blanket root access.
+# postStartCommand execs non-interactively (no pseudo-TTY), and xenial's
+# default sudo still enforces requiretty even for NOPASSWD entries -- scope
+# the tty exemption to john specifically, not a global Defaults change.
+#
+# The third NOPASSWD entry (chmod on /vscode) works around a separate issue:
+# /vscode is VS Code Dev Containers' own shared, cross-project server-install
+# cache volume (named "vscode", external=true -- not something this project
+# creates or owns). It extracts the VS Code Server tarball as root, leaving
+# `node` and friends mode 755 (no group/other write). VS Code's own
+# self-patch step (triggered by VSCODE_SERVER_CUSTOM_GLIBC_LINKER etc. above)
+# then tries to rewrite that same `node` binary in place as remoteUser
+# (john) to point it at /opt/vscode-glibc -- which fails with "Permission
+# denied" since john doesn't own it, and VS Code's patch script doesn't check
+# patchelf's exit code, so it silently reports "Patching complete" anyway and
+# the stale unpatched binary keeps failing the same old-glibc check forever.
+# Loosening perms on the whole cache on every start means: the very first
+# time a new VS Code Server commit is downloaded the connection can still
+# fail once, but the next start (or "Dev Containers: Reopen") self-heals,
+# since the postStartCommand below runs before VS Code tries to attach again.
+RUN apt-get update && apt-get install -y --no-install-recommends sudo && \
+    rm -rf /var/lib/apt/lists/* && \
+    { echo "john ALL=(root) NOPASSWD: /usr/sbin/groupadd, /usr/sbin/usermod, /bin/chmod -R a+rwX /vscode"; \
+      echo "Defaults:john !requiretty"; } > /etc/sudoers.d/john && \
+    chmod 0440 /etc/sudoers.d/john
+
 USER john
-
-RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.5/install.sh | bash
-
-RUN bash -lc "nvm install 20"
-
-WORKDIR /home/john/app/sudoku_ui_prj/sudoku-ui-src
-
-RUN bash -lc "npm install"

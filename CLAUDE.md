@@ -129,20 +129,55 @@ its own pre-flight requirements check). `patchelf` itself has to be pre-patched 
 glibc *before* being copied into the final image, since it can't run under xenial's system glibc either.
 
 Even though production now splits backend/frontend into separate images (see "Docker build architecture"
-above), this devcontainer stays a single all-in-one container for developer convenience: after the glibc
-shim, its own Dockerfile layers Node/nvm + `npm install` for `sudoku_ui_prj/sudoku-ui-src` on top of the
-backend image — the same steps the root `Dockerfile` used to run before the split. This works because the
-backend image's own `COPY . ${HOME}/app` still brings in the (unbuilt) UI source, so there's nothing left
-to `COPY` here. One VS Code window/terminal can still edit and run Java, OCaml, and React all together.
+above), this devcontainer stays a single all-in-one container for developer convenience — but it does
+**not** install Node to get there. Modern Node (18+, required by Vite) can't actually run on this xenial
+base at all: its prebuilt binaries need glibc ≥ 2.27/2.28, the same wall VS Code Server hits above, except
+here there's no equivalent patchelf trick worth the fragility (Vite's own dependency tree pulls in several
+more native binaries — esbuild, rollup — that would each need the same patching). Instead, the Dockerfile
+installs a plain Docker CLI + compose plugin (static Go binaries downloaded directly from
+download.docker.com / the compose GitHub releases — statically linked, so the old glibc doesn't matter),
+and `devcontainer.json` bind-mounts the host's own `docker.sock` in. Running `docker compose up frontend`
+from this devcontainer's own terminal then starts the frontend as a *sibling* container using its own
+genuinely-modern `node:20` image — one VS Code window/terminal still edits everything, but "running" the
+UI happens via Docker-outside-of-Docker rather than a Node install that can't work here.
+
+The official `ghcr.io/devcontainers/features/docker-outside-of-docker` feature would normally provide the
+Docker CLI + socket wiring, but it refuses to install at all on xenial (its apt-based install path only
+supports a fixed allowlist of newer distro codenames, even with its own `"moby": false` escape hatch) —
+hence the manual static-binary install.
+
+`docker.sock`'s owning group has a GID that varies by host/Docker install, so it can't be baked into the
+image at build time — `devcontainer.json`'s `postStartCommand` detects it and adds `john` to a matching
+group on every container *start* instead. That needs root, so the Dockerfile grants `john` a narrowly
+scoped, passwordless `sudo` for just `groupadd`/`usermod` (not blanket root access) via
+`/etc/sudoers.d/john` — note it also disables `requiretty` for `john` specifically, since
+`postStartCommand` execs without a pseudo-TTY and xenial's default sudo build otherwise refuses non-TTY
+NOPASSWD commands. sudo's policy matching is on the exact command given to `sudo` itself, so the
+postStartCommand script calls `sudo groupadd`/`sudo usermod` directly rather than wrapping them in
+`sudo bash -c '...'` (which would make sudo see "bash" as the command, not matching the scoped rule).
+
+The same sudoers file also grants `chmod -R a+rwX /vscode`, run by `postStartCommand` on every start.
+`/vscode` isn't a path in this repo — it's VS Code Dev Containers' own shared, cross-project server-install
+cache volume (named `vscode`, `external=true` in `devcontainer.json`'s `mounts`). It extracts each VS Code
+Server version as root the first time any devcontainer on the machine uses it, leaving `node` mode `755`
+(no group/other write). The `VSCODE_SERVER_CUSTOM_GLIBC_LINKER`/`_PATH`/`PATCHELF_PATH` env vars above make
+VS Code Server try to patch that same `node` binary in place, as `remoteUser` (`john`), to point it at
+`/opt/vscode-glibc` — which fails with "Permission denied" since `john` doesn't own it, and VS Code's own
+patch script doesn't check `patchelf`'s exit code, so it logs "Patching complete" regardless and the
+connection then fails against the still-unpatched binary. Loosening `/vscode`'s permissions on every start
+doesn't fix the very first connection attempt against a brand-new VS Code Server commit (the tree doesn't
+exist yet when `postStartCommand` runs), but it does mean the *next* start after that first failure
+self-heals, rather than staying broken until someone manually fixes the shared volume.
 
 `devcontainer.json` mounts the live repo directly over `/home/john/app` (where the image was built)
-instead of the default `/workspaces/<name>`, and `remoteUser` is `john` (root has no opam switch). Three
-named volumes protect `libs/inez`, `libs/scipoptsuite-3.1.1`, and `sudoku_ui_prj/sudoku-ui-src/
-node_modules` from being shadowed by that live bind mount — those paths hold build output
-(`inez.top`/`inez.opt`, `libscipopt.so`, installed npm packages) that only exists inside the pre-built
-image, not in a fresh git checkout; unlike `sudoku_solver_inez/src`'s `sudoku.cma` below, none of them
-need rebuilding on every start, just seeding once. A `postStartCommand` reruns `omake` in
-`sudoku_solver_inez/src` on every container start so edits there take effect immediately.
+instead of the default `/workspaces/<name>`, and `remoteUser` is `john` (root has no opam switch). Two
+named volumes protect `libs/inez` and `libs/scipoptsuite-3.1.1` from being shadowed by that live bind
+mount — those paths hold build output (`inez.top`/`inez.opt`, `libscipopt.so`) that only exists inside the
+pre-built image, not in a fresh git checkout, and (unlike `sudoku_solver_inez/src`'s `sudoku.cma` below)
+don't need rebuilding on every start, just seeding once. (There's no `node_modules` volume here anymore —
+the frontend's `node_modules` live inside its own sibling container/image now, not in this one.) A
+`postStartCommand` step reruns `omake` in `sudoku_solver_inez/src` on every container start so edits there
+take effect immediately.
 
 ## Notes
 

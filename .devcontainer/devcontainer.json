@@ -27,11 +27,15 @@
     }
   },
 
-  // The frontend (Vite dev server, started manually via `npm start` in
-  // sudoku_ui_prj/sudoku-ui-src) listens on 3000; the backend (SudokuServer,
-  // started manually via `run.sh`) listens on 8080. Forward both so VS Code
-  // auto-detects them and offers to open them in a browser instead of
-  // requiring a manual forward from the Ports panel.
+  // The frontend (Vite dev server, started manually via `docker compose up
+  // frontend`) listens on 3000; the backend (SudokuServer, started manually
+  // via `run.sh`) listens on 8080. Forward both so VS Code auto-detects them
+  // and offers to open them in a browser instead of requiring a manual
+  // forward from the Ports panel. (3000 is technically published straight
+  // to the host already, since `docker compose up frontend` (see the
+  // docker.sock mount below) creates a sibling container rather than one
+  // nested inside this one -- declaring it here anyway still gets it a
+  // label and auto-detection in the Ports panel.)
   "forwardPorts": [3000, 8080],
   "portsAttributes": {
     "3000": {
@@ -55,36 +59,52 @@
   "workspaceMount": "source=${localWorkspaceFolder},target=/home/john/app,type=bind,consistency=cached",
   "workspaceFolder": "/home/john/app",
 
-  // libs/inez, libs/scipoptsuite-3.1.1, and sudoku_ui_prj/sudoku-ui-src/
-  // node_modules all contain build output produced while building the image
-  // (inez.top/inez.opt, libscipopt.so, installed npm packages) that isn't
-  // present in the plain host source tree. The published backend image no
-  // longer installs Node itself (the frontend split into its own
-  // docker-compose service) -- node_modules here comes from this
-  // devcontainer's own Dockerfile, which layers Node/npm install on top of
-  // the backend image so this stays a single all-in-one dev container.
-  // Mount these paths as named
-  // volumes -- Docker seeds a new empty volume from the image's content at
-  // that path on first use -- so the bind mount above doesn't shadow the
-  // build output with the (unbuilt) host copy. Unlike sudoku_solver_inez/src's
-  // sudoku.cma below, none of these need rebuilding on every container
-  // start, only seeding once.
+  // libs/inez and libs/scipoptsuite-3.1.1 contain compiled build output
+  // (inez.top/inez.opt, libscipopt.so) produced while building the image,
+  // not present in the plain host source tree. Mount these two paths as
+  // named volumes -- Docker seeds a new empty volume from the image's
+  // content at that path on first use -- so the bind mount above doesn't
+  // shadow the compiled output with the (unbuilt) host copy. (There's no
+  // longer a node_modules volume here -- the frontend's node_modules live
+  // inside its own sibling container/image now, not in this one.)
   //
-  // If you change libs/inez, libs/scipoptsuite-3.1.1, or sudoku-ui-src's
-  // package.json and rebuild the image, delete the corresponding volume so
-  // it gets reseeded from the new build (otherwise the old build output
-  // persists in the volume).
+  // If you change libs/inez or libs/scipoptsuite-3.1.1 and rebuild the
+  // image, delete these two volumes so they get reseeded from the new build
+  // (otherwise the old compiled output persists in the volume).
+  //
+  // Also bind-mount the host's own docker.sock, giving this container's
+  // docker CLI (see Dockerfile) a route to the host's Docker daemon so
+  // `docker compose up frontend` runs the frontend as a sibling container.
   "mounts": [
     "source=sudoku-solver-inez-libs-inez,target=/home/john/app/libs/inez,type=volume",
     "source=sudoku-solver-inez-libs-scip,target=/home/john/app/libs/scipoptsuite-3.1.1,type=volume",
-    "source=sudoku-solver-inez-ui-node-modules,target=/home/john/app/sudoku_ui_prj/sudoku-ui-src/node_modules,type=volume"
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
   ],
 
-  // sudoku_solver_inez/src's own OMakefile builds a "sudoku" OCaml library
-  // (sudoku.cma) that solver.init loads at runtime. That compiled output is
-  // baked into the image but lives inside the plain bind-mounted workspace
-  // (unlike libs/inez and libs/scipoptsuite-3.1.1 above), so it gets shadowed
-  // by the host source on mount. Rebuild it (fast, ~1s, incremental) on every
-  // container start so run_solver.sh has an up-to-date sudoku.cma.
-  "postStartCommand": "bash -lc 'eval `opam config env` && cd ${containerWorkspaceFolder}/sudoku_solver_inez/src && omake'"
+  // Three independent things need to happen on every container start:
+  // - sudoku_solver_inez/src's own OMakefile builds a "sudoku" OCaml library
+  //   (sudoku.cma) that solver.init loads at runtime. That compiled output
+  //   is baked into the image but lives inside the plain bind-mounted
+  //   workspace (unlike libs/inez and libs/scipoptsuite-3.1.1 above), so it
+  //   gets shadowed by the host source on mount. Rebuild it (fast, ~1s,
+  //   incremental) so run_solver.sh has an up-to-date sudoku.cma.
+  // - The mounted docker.sock above is owned by a group whose GID varies by
+  //   host/Docker install (so it can't just be baked into the image at
+  //   build time) -- match john into that group here instead. Needs root,
+  //   hence the scoped sudoers rule in Dockerfile.
+  // - /vscode (VS Code Dev Containers' own shared, cross-project server
+  //   cache volume) gets its VS Code Server tarball extracted as root on
+  //   first use of any given commit, mode 755 -- unwritable by remoteUser
+  //   john. VS Code's own runtime self-patch step (see
+  //   VSCODE_SERVER_CUSTOM_GLIBC_LINKER etc. in Dockerfile) needs to rewrite
+  //   its `node` binary in place as john to point it at /opt/vscode-glibc,
+  //   which silently fails ("Permission denied", swallowed by VS Code's own
+  //   script) without this. Loosen it back up on every start so a fresh VS
+  //   Code Server version self-heals on the next start after its first
+  //   (failed) connection attempt, rather than staying broken forever.
+  "postStartCommand": {
+    "rebuild-solver": "bash -lc 'eval `opam config env` && cd ${containerWorkspaceFolder}/sudoku_solver_inez/src && omake'",
+    "docker-socket-group": "bash -c 'gid=$(stat -c %g /var/run/docker.sock); getent group $gid >/dev/null || sudo groupadd -g $gid docker-host; sudo usermod -aG $(getent group $gid | cut -d: -f1) john'",
+    "fix-vscode-server-perms": "sudo chmod -R a+rwX /vscode"
+  }
 }
