@@ -44,15 +44,15 @@ either. With the "Dev Containers" extension, open this repository in VS Code and
 From a terminal in the devcontainer (or any machine with Docker installed), the whole system runs via
 `docker compose`, with live source bind-mounted into both containers:
 
-    bash scripts/dev-run.sh       # start (or refresh) both containers
-    bash scripts/dev-rebuild.sh   # only needed after SudokuServer/Java changes or new
-                                   # frontend npm dependencies
+    bash scripts/dev-run.sh    # start (or refresh) both containers
+    bash scripts/dev-build.sh  # rebuild and redeploy - only needed after SudokuServer/Java
+                               # changes or new frontend npm dependencies
 
 Most edits — frontend source, the OCaml solver — take effect without running either command at all; see
 `CLAUDE.md`'s "Docker build architecture" section for exactly what does and doesn't need a rebuild, and
 why. `scripts/` also has `run-native.sh`, for the uncommon case of developing with no Docker/devcontainer
 at all (every toolchain installed directly on the machine instead) — most development should use
-`dev-run.sh`/`dev-rebuild.sh` above rather than this.
+`dev-run.sh`/`dev-build.sh` above rather than this.
 
 `docker/` holds a separate set of scripts (`build.sh`, `run.sh`, `publish.sh`, `save.sh`) for building
 these images from scratch and publishing them to Docker Hub — not for day-to-day development.

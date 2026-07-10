@@ -37,9 +37,10 @@ bash docker/run.sh        # docker compose up, ports 3000 (UI) and 8080 (API)
 
 # Day-to-day dev loop instead (e.g. from a devcontainer terminal) - both bind-mount
 # live source, see "Docker build architecture" below
-bash scripts/dev-run.sh      # docker compose up -d, then restart backend (fresh omake pass)
-bash scripts/dev-rebuild.sh  # docker compose build - only needed for SudokuServer/Java changes
-                             # or new frontend npm deps, not for OCaml solver edits
+bash scripts/dev-run.sh    # docker compose up -d, then restart backend (fresh omake pass)
+bash scripts/dev-build.sh  # docker compose build, then dev-run.sh - only needed for
+                           # SudokuServer/Java changes or new frontend npm deps, not
+                           # for OCaml solver edits
 
 # SudokuServer (Java)
 cd SudokuServer && mvn package   # also runs JUnit tests (src/test/java)
@@ -70,7 +71,7 @@ this script predates that split and was kept only for developers who still work 
 `docker save` against both `jgaltidor/sudoku-solver-backend` and `jgaltidor/sudoku-solver-frontend`) — they
 do not rebuild anything.
 
-`scripts/dev-run.sh`/`dev-rebuild.sh` deliberately keep the `dev-` prefix rather than taking the plain
+`scripts/dev-run.sh`/`dev-build.sh` deliberately keep the `dev-` prefix rather than taking the plain
 `build.sh`/`run.sh` names — those are already `docker/`'s from-scratch build-and-publish scripts, which do
 something meaningfully different (full submodule init, `docker compose build` unconditionally, foreground
 `docker compose up`). Two same-named scripts behaving differently depending on which directory you're in
@@ -107,9 +108,11 @@ order: apt (old system OCaml + camlp4 + opam + Boost), Java 11 + Maven, `mvn pac
 the SCIP Optimization Suite, `opam init` and pin **Jane Street Core 112.35.01** (old, camlp4-based — do
 not casually bump this or the packages listed after it), build Inez, build `sudoku_solver_inez`. It still
 does `COPY . ${HOME}/app` (the whole monorepo, including the unbuilt `sudoku_ui_prj` source) rather than
-scoping the copy to just the backend's own directories — this is deliberate too, since it lets the
-devcontainer's own Dockerfile (see below) layer Node on top of this same image without needing a second
-`COPY`.
+scoping the copy to just the backend's own directories. That used to be load-bearing — the devcontainer's
+own Dockerfile installed Node on top of this same image and needed the UI source already present — but the
+devcontainer no longer installs Node at all (see "Devcontainer" below, Docker-outside-of-Docker instead),
+so today the broad `COPY` is just an accepted minor inefficiency, not something scoping it down would
+break.
 
 Two vendored dependencies are intentionally *not* plain source trees in git:
 
@@ -151,13 +154,20 @@ change:
   service's `command` override reruns `omake` before launching `SudokuServer` to rebuild it, the same fix
   `.devcontainer/devcontainer.json`'s `postStartCommand` applies for the same reason (see below).
 
+Changes that do need an image rebuild (Java source, frontend `package.json`) need more than just
+`docker compose build`, though: that only rebuilds the image, it doesn't restart an already-running
+container to use it, so a rebuild with no follow-up `docker compose up` silently leaves the stale container
+running the old image. `scripts/dev-build.sh` chains both steps for exactly this reason — verified with a
+synthetic compose service: `build` alone left a running container on its old image, and only a subsequent
+`up -d` recreated it against the new one.
+
 `docker-compose.yml` also pins a top-level `name: sudoku-solver-service`. Without it, Compose derives the
 project name from the basename of the directory containing the file, which differs between a host checkout
 (e.g. `sudoku_solver_service_inez`) and the devcontainer's own bind-mounted workspace (`app`, per
 `.devcontainer/devcontainer.json`'s `workspaceFolder` below) — so `docker compose restart backend` (or any
 other command targeting an already-running container) run from one of those contexts would silently look
 for a different, unrelated project instead of finding the containers actually running, rather than erroring
-in an obvious way. `scripts/dev-run.sh` and `scripts/dev-rebuild.sh` above wrap the day-to-day dev-loop
+in an obvious way. `scripts/dev-run.sh` and `scripts/dev-build.sh` above wrap the day-to-day dev-loop
 commands so this doesn't need to be remembered per-invocation.
 
 ## Devcontainer (`.devcontainer/`)

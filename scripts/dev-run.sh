@@ -10,6 +10,6 @@ BASEDIR=$(dirname "$0")
 #   solver.ml itself doesn't even need that much, since it's interpreted
 #   fresh by the Inez toplevel on every request regardless.
 # Java changes under SudokuServer and new frontend npm dependencies need an
-# actual image rebuild first -- see dev-rebuild.sh.
+# actual image rebuild first -- see dev-build.sh.
 docker compose -f "$BASEDIR/../docker-compose.yml" up -d
 docker compose -f "$BASEDIR/../docker-compose.yml" restart backend
