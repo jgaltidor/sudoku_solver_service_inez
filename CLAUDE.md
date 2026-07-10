@@ -37,9 +37,9 @@ bash docker/run.sh        # docker compose up, ports 3000 (UI) and 8080 (API)
 
 # Day-to-day dev loop instead (e.g. from a devcontainer terminal) - both bind-mount
 # live source, see "Docker build architecture" below
-bash docker/dev-run.sh      # docker compose up -d, then restart backend (fresh omake pass)
-bash docker/dev-rebuild.sh  # docker compose build - only needed for SudokuServer/Java changes
-                            # or new frontend npm deps, not for OCaml solver edits
+bash scripts/dev-run.sh      # docker compose up -d, then restart backend (fresh omake pass)
+bash scripts/dev-rebuild.sh  # docker compose build - only needed for SudokuServer/Java changes
+                             # or new frontend npm deps, not for OCaml solver edits
 
 # SudokuServer (Java)
 cd SudokuServer && mvn package   # also runs JUnit tests (src/test/java)
@@ -149,7 +149,7 @@ project name from the basename of the directory containing the file, which diffe
 `.devcontainer/devcontainer.json`'s `workspaceFolder` below) — so `docker compose restart backend` (or any
 other command targeting an already-running container) run from one of those contexts would silently look
 for a different, unrelated project instead of finding the containers actually running, rather than erroring
-in an obvious way. `docker/dev-run.sh` and `docker/dev-rebuild.sh` above wrap the day-to-day dev-loop
+in an obvious way. `scripts/dev-run.sh` and `scripts/dev-rebuild.sh` above wrap the day-to-day dev-loop
 commands so this doesn't need to be remembered per-invocation.
 
 ## Devcontainer (`.devcontainer/`)
