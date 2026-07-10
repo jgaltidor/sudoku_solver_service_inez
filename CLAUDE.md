@@ -35,6 +35,12 @@ wires them together for real use.
 bash docker/build.sh      # git submodule init + docker compose build (both images)
 bash docker/run.sh        # docker compose up, ports 3000 (UI) and 8080 (API)
 
+# Day-to-day dev loop instead (e.g. from a devcontainer terminal) - both bind-mount
+# live source, see "Docker build architecture" below
+bash docker/dev-run.sh      # docker compose up -d, then restart backend (fresh omake pass)
+bash docker/dev-rebuild.sh  # docker compose build - only needed for SudokuServer/Java changes
+                            # or new frontend npm deps, not for OCaml solver edits
+
 # SudokuServer (Java)
 cd SudokuServer && mvn package   # also runs JUnit tests (src/test/java)
 mvn test                          # tests only
@@ -53,11 +59,16 @@ omake tests.opt && ./tests.opt              # runs sudoku_solver_inez/src/tests.
 ./run_solver.sh < input_board_example.json  # solve a board directly, writes output.json
 ```
 
-Root-level `run.sh` starts both `SudokuServer` and the UI dev server together for local, no-Docker use
-(it's no longer the Docker image's runtime entrypoint now that backend/frontend are split into separate
-containers — each has its own `CMD`, see below). `docker/publish.sh` and `docker/save.sh` operate on
-already-built images (`docker compose push`, `docker save` against both `jgaltidor/sudoku-solver-backend`
-and `jgaltidor/sudoku-solver-frontend`) — they do not rebuild anything.
+`scripts/run-native.sh` starts both `SudokuServer` and the UI dev server together, but only for a fully
+native, no-Docker/no-devcontainer setup — Java+Maven, Node, and the OCaml/opam/Inez/SCIP toolchain all
+installed directly on the machine running it (`SudokuServer`'s jar already built via `mvn package`, and
+`npm install` already run under `sudoku_ui_prj/sudoku-ui-src`). It can't run inside the devcontainer: that
+image deliberately has no Node (see "Devcontainer" below), so its `npm start` step would just fail there.
+It's also not part of the Docker/compose split at all — each container has its own `CMD` now (see below) —
+this script predates that split and was kept only for developers who still work fully outside Docker.
+`docker/publish.sh` and `docker/save.sh` operate on already-built images (`docker compose push`,
+`docker save` against both `jgaltidor/sudoku-solver-backend` and `jgaltidor/sudoku-solver-frontend`) — they
+do not rebuild anything.
 
 ## Docker build architecture
 
@@ -131,6 +142,15 @@ change:
   solver modules (`sudoku_board.ml` etc.) compile into, since that file lives inside the same path. The
   service's `command` override reruns `omake` before launching `SudokuServer` to rebuild it, the same fix
   `.devcontainer/devcontainer.json`'s `postStartCommand` applies for the same reason (see below).
+
+`docker-compose.yml` also pins a top-level `name: sudoku-solver-service`. Without it, Compose derives the
+project name from the basename of the directory containing the file, which differs between a host checkout
+(e.g. `sudoku_solver_service_inez`) and the devcontainer's own bind-mounted workspace (`app`, per
+`.devcontainer/devcontainer.json`'s `workspaceFolder` below) — so `docker compose restart backend` (or any
+other command targeting an already-running container) run from one of those contexts would silently look
+for a different, unrelated project instead of finding the containers actually running, rather than erroring
+in an obvious way. `docker/dev-run.sh` and `docker/dev-rebuild.sh` above wrap the day-to-day dev-loop
+commands so this doesn't need to be remembered per-invocation.
 
 ## Devcontainer (`.devcontainer/`)
 

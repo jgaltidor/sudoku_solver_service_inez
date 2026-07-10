@@ -1,5 +1,5 @@
 #! /usr/bin/env bash
-BASEDIR=$(dirname "$0")
+BASEDIR=$(dirname "$0")/..
 echo "Launching Backend Sudoku Service"
 pushd $BASEDIR/SudokuServer
 ./run.sh &

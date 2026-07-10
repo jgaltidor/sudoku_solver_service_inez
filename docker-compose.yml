@@ -1,3 +1,12 @@
+# Pin the Compose project name explicitly. Without this, Compose derives it
+# from the basename of the directory containing this file, which differs
+# between a host checkout (e.g. "sudoku_solver_service_inez") and the
+# devcontainer's own bind-mounted workspace ("app", per
+# .devcontainer/devcontainer.json's workspaceFolder) -- so the same "docker
+# compose" commands run from those two contexts would silently operate on
+# two unrelated projects instead of the one set of containers.
+name: sudoku-solver-service
+
 services:
   backend:
     build: .
