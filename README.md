@@ -21,16 +21,17 @@ There are package consists of three main components:
   sudoku_ui_prj is implemented using [ReactJS][reactjs].
   This server serves webpages that can be rendered by browsers.
 
-A Docker image running this webservice is available in
-Docker Hub repository `jgaltidor/sudoku_solver_service`.
-This image is easily downloaded to your Docker installation.
+Docker images running this web service are available on Docker Hub as two
+separate images, one per component above that needs its own runtime: `jgaltidor/sudoku-solver-backend`
+(`SudokuServer` + `sudoku_solver_inez`) and `jgaltidor/sudoku-solver-frontend` (`sudoku_ui_prj`). With
+Docker installed and this repository cloned, pull and run both together with:
 
-    docker pull jgaltidor/sudoku_solver_service_inez
+    docker compose pull
+    docker compose up
 
-Running this web service with this Docker image is easily
-performed by executing the following command:
-
-    docker run -p 3000:3000 -p 8080:8080 -i jgaltidor/sudoku_solver_service_inez /bin/bash -c '$SUDOKU_SERVICE/run.sh'
+This starts the backend API on port 8080 and the frontend UI on port 3000 — open
+http://localhost:3000 in a browser once both containers are up. See `CLAUDE.md` for the full set of
+build/run commands, including a devcontainer-based development setup.
 
 
 [inez]: https://github.com/vasilisp/inez
