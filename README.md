@@ -73,8 +73,8 @@ try it right away with the bundled example:
 
     bash scripts/solve_example.sh
 
-That prints the example input board (`scripts/example_input.json`) and the solved result, so you can see
-the whole thing work end to end without writing anything yourself first.
+That solves the bundled example board (`example_inputs/solve_input_example.json`) and prints the result, so you
+can see the whole thing work end to end without writing anything yourself first.
 
 For your own board, use `scripts/solve.sh` directly:
 
@@ -82,13 +82,13 @@ For your own board, use `scripts/solve.sh` directly:
 
 `scripts/solve.sh` works from any directory. `input.json` is a JSON file with a `board` key: a 9x9 array
 of arrays of ints, using `0` for blank cells — the same shape the HTTP API's POST body takes.
-`scripts/example_input.json` is a worked example of this format (also see
+`example_inputs/solve_input_example.json` is a worked example of this format (also see
 `sudoku_solver_inez/src/input_board_example.json`, an identical fixture used elsewhere in this repo). If
 you omit the output path, the result (`has_solution` / `solved_board`, same shape as
 `sudoku_solver_inez/src/output_example.json`) is printed to stdout instead of written to a file.
 
-    bash scripts/solve.sh scripts/example_input.json
-    bash scripts/solve.sh scripts/example_input.json solved.json
+    bash scripts/solve.sh example_inputs/solve_input_example.json
+    bash scripts/solve.sh example_inputs/solve_input_example.json solved.json
 
 ### Tests
 

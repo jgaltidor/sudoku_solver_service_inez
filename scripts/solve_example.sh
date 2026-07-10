@@ -1,25 +1,17 @@
 #! /usr/bin/env bash
-# Runnable illustration of scripts/solve.sh's basic usage -- not something
-# you need for day-to-day solving, just a quick "does the toolchain work,
-# what does an input file look like" sanity check. Solves the example board
-# at scripts/example_input.json and prints the result. Works from any
-# directory, e.g. from inside the devcontainer:
+# Example invocation of scripts/solve.sh, showing how to solve a board from
+# the command line. Run from any directory:
 #
 #   bash scripts/solve_example.sh
 #
-# scripts/solve.sh itself takes any board file in the same {"board": [...]}
-# shape -- see scripts/example_input.json for what that shape looks like.
+# which is equivalent to, from the repo root:
+#
+#   bash scripts/solve.sh example_inputs/solve_input_example.json
+#
+# See example_inputs/solve_input_example.json for what the input format looks like
+# ({"board": [[9x9 ints, 0 for blank cells]]}), and scripts/solve.sh's own
+# comments for the [output.json] argument and general usage.
 set -euo pipefail
 
-basedir=$(cd "$(dirname "$0")" && pwd)
-example_input="$basedir/example_input.json"
-
-echo "### Input board ($example_input):" >&2
-cat "$example_input" >&2
-echo >&2
-
-echo "### Running: bash scripts/solve.sh $example_input" >&2
-echo >&2
-
-echo "### Result:" >&2
-"$basedir/solve.sh" "$example_input"
+basedir=$(cd "$(dirname "$0")/.." && pwd)
+"$basedir/scripts/solve.sh" "$basedir/example_inputs/solve_input_example.json"
