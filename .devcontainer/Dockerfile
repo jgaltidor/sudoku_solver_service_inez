@@ -124,9 +124,18 @@ RUN mkdir -p /usr/local/lib/docker/cli-plugins && \
 # time a new VS Code Server commit is downloaded the connection can still
 # fail once, but the next start (or "Dev Containers: Reopen") self-heals,
 # since the postStartCommand below runs before VS Code tries to attach again.
+# The `:` in `root:dev` below needs its own backslash escape *within the
+# sudoers file's own grammar* -- sudo's config-file parser (not the shell)
+# treats an unescaped `:` as reserved (used elsewhere in sudoers syntax,
+# e.g. Runas_Alias lists), so an unescaped one here is a sudoers syntax
+# error ("parse error ... near line 1"), not a shell-quoting issue -- the
+# actual `sudo chown root:dev ...` invocation in postStartCommand needs no
+# such escaping itself, since that's just a normal command line, not
+# sudoers-file syntax. Confirmed with `visudo -cf` against this exact file
+# content.
 RUN apt-get update && apt-get install -y --no-install-recommends sudo && \
     rm -rf /var/lib/apt/lists/* && \
-    { echo "dev ALL=(root) NOPASSWD: /bin/chown root:dev /var/run/docker.sock, /bin/chmod -R a+rwX /vscode"; \
+    { echo "dev ALL=(root) NOPASSWD: /bin/chown root\:dev /var/run/docker.sock, /bin/chmod -R a+rwX /vscode"; \
       echo "Defaults:dev !requiretty"; } > /etc/sudoers.d/dev && \
     chmod 0440 /etc/sudoers.d/dev
 
