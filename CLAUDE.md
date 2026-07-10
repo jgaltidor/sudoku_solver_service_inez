@@ -61,7 +61,7 @@ omake tests.opt && ./tests.opt              # runs sudoku_solver_inez/src/tests.
 
 # Solve a board directly, from any directory (see README.md's "Solving a board
 # from the command line" section) - preferred over invoking run_solver.sh by hand:
-bash scripts/solve_example.sh                            # bundled example
+bash scripts/test_solver.sh                            # bundled example
 bash scripts/solve.sh example_inputs/solve_input_example.json  # equivalent, explicit form
 ```
 

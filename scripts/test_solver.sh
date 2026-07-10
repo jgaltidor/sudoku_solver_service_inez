@@ -2,7 +2,7 @@
 # Example invocation of scripts/solve.sh, showing how to solve a board from
 # the command line. Run from any directory:
 #
-#   bash scripts/solve_example.sh
+#   bash scripts/test_solver.sh
 #
 # which is equivalent to, from the repo root:
 #

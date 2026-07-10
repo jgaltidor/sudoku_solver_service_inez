@@ -71,7 +71,7 @@ To solve a single board directly — no `SudokuServer`/HTTP API, no UI — from 
 devcontainer (or any environment with the `sudoku_solver_inez` OCaml/Inez/SCIP toolchain already built),
 try it right away with the bundled example:
 
-    bash scripts/solve_example.sh
+    bash scripts/test_solver.sh
 
 That solves the bundled example board (`example_inputs/solve_input_example.json`) and prints the result, so you
 can see the whole thing work end to end without writing anything yourself first.
