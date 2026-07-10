@@ -65,6 +65,22 @@ fine either way, but if you're on a branch with Dockerfile changes, run `bash sc
 `docker/` holds a separate set of scripts (`build.sh`, `run.sh`, `publish.sh`, `save.sh`) for building
 these images from scratch and publishing them to Docker Hub — not for day-to-day development.
 
+### Solving a board from the command line
+
+To solve a single board directly — no `SudokuServer`/HTTP API, no UI — from a terminal inside the
+devcontainer (or any environment with the `sudoku_solver_inez` OCaml/Inez/SCIP toolchain already built):
+
+    bash scripts/solve.sh path/to/input.json [path/to/output.json]
+
+`scripts/solve.sh` works from any directory. `input.json` is a JSON file with a `board` key: a 9x9 array
+of arrays of ints, using `0` for blank cells — the same shape the HTTP API's POST body takes; see
+`sudoku_solver_inez/src/input_board_example.json` for a worked example. If you omit the output path, the
+result (`has_solution` / `solved_board`, same shape as `sudoku_solver_inez/src/output_example.json`) is
+printed to stdout instead of written to a file.
+
+    bash scripts/solve.sh sudoku_solver_inez/src/input_board_example.json
+    bash scripts/solve.sh sudoku_solver_inez/src/input_board_example.json solved.json
+
 ### Tests
 
 - `SudokuServer`: `cd SudokuServer && mvn test` (JUnit, also runs as part of `mvn package`).

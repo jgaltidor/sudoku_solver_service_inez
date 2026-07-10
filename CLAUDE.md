@@ -58,8 +58,20 @@ npm run build                              # production build to sudoku-ui-src/d
 cd sudoku_solver_inez/src
 eval `opam config env` && omake             # builds the "sudoku" OCamlLibrary (sudoku_board, sudoku_config, sudoku_entry, utils)
 omake tests.opt && ./tests.opt              # runs sudoku_solver_inez/src/tests.ml
-./run_solver.sh < input_board_example.json  # solve a board directly, writes output.json
+
+# Solve a board directly, from any directory (see README.md's "Solving a board
+# from the command line" section) - preferred over invoking run_solver.sh by hand:
+bash scripts/solve.sh sudoku_solver_inez/src/input_board_example.json
 ```
+
+`run_solver.sh` itself takes no arguments and reads no stdin (a `run_solver.sh < some_file.json` you might
+see elsewhere is a no-op: `run_solver.sh` never references its own stdin, and the `< $*` redirect inside
+the `solver.sh` it calls instead feeds `solver.ml`'s own OCaml source into `inez.top`'s stdin — that's the
+mechanism by which `solver.ml` gets interpreted, not a way to pass board data). The board actually comes
+from `Sudoku_config.create ()` (`sudoku_config.ml`) opening a file literally named `sudoku_config.json` in
+whatever directory `run_solver.sh` is run from — never an argument or stdin. `scripts/solve.sh` above
+handles this for you (private temp working directory per invocation, same trick `App.java` uses per HTTP
+request) instead of requiring `sudoku_config.json` to exist in your current directory by hand.
 
 `scripts/run-native.sh` starts both `SudokuServer` and the UI dev server together, but only for a fully
 native, no-Docker/no-devcontainer setup — Java+Maven, Node, and the OCaml/opam/Inez/SCIP toolchain all
