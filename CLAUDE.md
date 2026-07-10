@@ -198,6 +198,13 @@ Docker CLI + socket wiring, but it refuses to install at all on xenial (its apt-
 supports a fixed allowlist of newer distro codenames, even with its own `"moby": false` escape hatch) —
 hence the manual static-binary install.
 
+The Claude Code CLI itself is deliberately **not** installed in this devcontainer, for the same reason as
+Node: its native binary dynamically links against a modern glibc/libstdc++ (officially supported on Ubuntu
+20.04+/Debian 10+ — not xenial), across every install method (native installer, npm, apt/dnf/apk), with no
+documented custom-glibc-linker escape hatch the way VS Code Server has. Run Claude Code from the host
+machine (or a plain, non-remote local VS Code window) instead — it edits the same bind-mounted repo either
+way, so there's no functional difference, just where the process itself runs.
+
 `docker.sock`'s owning group has a GID that varies by host/Docker install, so it can't be baked into the
 image at build time — `devcontainer.json`'s `postStartCommand` detects it and adds `john` to a matching
 group on every container *start* instead. That needs root, so the Dockerfile grants `john` a narrowly
