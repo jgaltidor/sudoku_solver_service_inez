@@ -34,7 +34,13 @@ RUN apt-get -y update && apt-get -y install --no-install-recommends \
   git \
   emacs \
   rlwrap \
-  curl
+  curl \
+  less \
+  rsync \
+  openssh-client \
+  unzip \
+  ca-certificates \
+  dos2unix
 
 # Install Java 11
 
@@ -50,31 +56,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 USER john
 
-# Install sudoku ui server dependency: Node.js/ReactJS
-
-# Install nvm package manager for installing Node.js/ReactJS
-
-RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.5/install.sh | bash
-
-# Install Node.js/ReactJS LTS version
-
-RUN nvm install 16
-
 ARG SUDOKU_SERVICE=${HOME}/app
-
-# Build Sudoku UI Server
-
-ARG SUDOKU_UI=${SUDOKU_SERVICE}/sudoku_ui_prj
-
-WORKDIR ${SUDOKU_UI}
-
-RUN npx -y create-react-app sudoku-ui --legacy-peer-deps --no-progress 2>&1 | grep -v "deprecated\|react.dev"
-
-RUN cp -r sudoku-ui-src/* sudoku-ui/. && \
-      cd sudoku-ui && \
-      npm install && \
-      npm install fetch && \
-      npm audit fix || true
 
 # Build Sudoku Server
 
@@ -159,21 +141,16 @@ WORKDIR ${SUDOKU_INEZ}/src
 
 RUN eval `opam config env` && omake
 
-WORKDIR ${SUDOKU_SERVICE}
-
-# Make SUDOKU_UI port 3000 available to the world outside this container
-EXPOSE 3000
+ENV SUDOKU_SERVICE=$SUDOKU_SERVICE
 
 # Make SUDOKU_SERVER port 8080 available to the world outside this container
 EXPOSE 8080
 
-ENV SUDOKU_SERVICE=$SUDOKU_SERVICE
+WORKDIR ${SUDOKU_SERVICE}/SudokuServer
 
-ENV SKIP_PREFLIGHT_CHECK=true
-
-# Launch Sudoku Web Services
-# ENTRYPOINT ${SUDOKU_SERVICE}/run.sh
-
-# Run bash when the container launches
-# CMD ["bash"]
+# Launch Sudoku Web Services. cwd matters here: sudoku_server.conf's
+# solver_script_file (../sudoku_solver_inez/src/run_solver.sh) and its bare
+# sudoku_config.json/sudoku_output.json paths are resolved relative to the
+# JVM's working directory, not to SudokuServer.jar's own location.
+CMD ["./run.sh"]
 

@@ -4,7 +4,7 @@ echo "Launching Backend Sudoku Service"
 pushd $BASEDIR/SudokuServer
 ./run.sh &
 popd
-pushd $BASEDIR/sudoku_ui_prj/sudoku-ui
+pushd $BASEDIR/sudoku_ui_prj/sudoku-ui-src
 echo "Launching Frontend Sudoku UI Web Server"
 npm start
 popd

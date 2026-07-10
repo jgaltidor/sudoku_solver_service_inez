@@ -16,10 +16,9 @@ sudoku_output.json
 /SudokuServer/sudoku_config.json
 /sudoku_solver_inez/src/output.json
 
-# Generated: fresh create-react-app scaffold with sudoku-ui-src/ overlaid on
-# top at Docker build time (see Dockerfile) -- sudoku-ui-src/ is the real
-# tracked source.
-/sudoku_ui_prj/sudoku-ui/
+# Generated: Vite build/install output for sudoku-ui-src/ (the tracked source)
+/sudoku_ui_prj/sudoku-ui-src/node_modules/
+/sudoku_ui_prj/sudoku-ui-src/dist/
 
 # Eclipse IDE project metadata (auto-generated on import)
 .classpath

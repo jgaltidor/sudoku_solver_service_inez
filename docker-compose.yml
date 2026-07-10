@@ -1,0 +1,16 @@
+services:
+  backend:
+    build: .
+    image: jgaltidor/sudoku-solver-backend:latest
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build: ./sudoku_ui_prj/sudoku-ui-src
+    image: jgaltidor/sudoku-solver-frontend:latest
+    ports:
+      - "3000:3000"
+    environment:
+      API_PROXY_TARGET: http://backend:8080
+    depends_on:
+      - backend

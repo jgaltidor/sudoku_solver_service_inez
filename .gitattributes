@@ -1,0 +1,10 @@
+# Normalize all text files to LF in the working tree, regardless of host OS
+# or the checking-out user's core.autocrlf setting. Without this, a Windows
+# host with core.autocrlf=true checks scripts out with CRLF, and since
+# .devcontainer/devcontainer.json bind-mounts the live repo straight into
+# the Linux container, a CRLF shebang line ("#!/usr/bin/env bash\r") fails
+# to run at all.
+* text=auto eol=lf
+
+# Pristine, tracked binary archive (see CLAUDE.md) -- never touch it.
+libs/scipoptsuite-3.1.1.tgz binary

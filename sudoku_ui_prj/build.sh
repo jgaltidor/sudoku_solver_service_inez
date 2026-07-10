@@ -1,7 +1,3 @@
-npx create-react-app sudoku-ui
-cp -r sudoku-ui-src/* sudoku-ui/.
-pushd sudoku-ui
+pushd sudoku-ui-src
 npm install
-npm install fetch
-npm audit fix
 popd
