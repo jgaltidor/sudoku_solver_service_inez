@@ -148,7 +148,7 @@ change:
 - `frontend` mounts `sudoku_ui_prj/sudoku-ui-src` over `/app` (plus an anonymous volume on
   `/app/node_modules`, so the container's own Linux-native `npm install` isn't shadowed by whatever's — or
   isn't — in that directory on the host). Vite's dev server picks up saved edits via HMR immediately.
-- `backend` mounts `sudoku_solver_inez` over its counterpart under `/home/john/app`. `solver.ml` itself
+- `backend` mounts `sudoku_solver_inez` over its counterpart under `/home/dev/app`. `solver.ml` itself
   needs no rebuild step to take effect — it's fed straight into the Inez OCaml toplevel per request rather
   than compiled (see above) — but the bind mount does shadow the pre-built `sudoku.cma` that the *other*
   solver modules (`sudoku_board.ml` etc.) compile into, since that file lives inside the same path. The
@@ -161,7 +161,7 @@ relative paths differently: a normal host checkout (where `.` is the real path a
 this repo's own devcontainer terminal, which reaches the real host's Docker daemon over a bind-mounted
 `docker.sock` (see "Devcontainer" below) but resolves `docker-compose.yml`'s relative paths against its
 *own* filesystem — a plain `.` there resolves to a devcontainer-internal path (e.g.
-`/home/john/app/sudoku_solver_inez`) that doesn't exist on the real host, which the real daemon then
+`/home/dev/app/sudoku_solver_inez`) that doesn't exist on the real host, which the real daemon then
 refuses to bind-mount ("not shared from the host"). `HOST_REPO_ROOT` is set in
 `.devcontainer/devcontainer.json`'s `containerEnv` to `${localWorkspaceFolder}` — the real host path
 `workspaceMount` bind-mounted this repo from — so Compose has the correct source path in both contexts.
@@ -227,22 +227,22 @@ way, so there's no functional difference, just where the process itself runs.
 `docker.sock` is root-owned, group `root`, mode `660` (group-writable, no other access) by default, and
 it's a bind mount that only exists once the container is actually running, so the fix can't be baked into
 the image at build time — `devcontainer.json`'s `postStartCommand` runs
-`sudo chown root:john /var/run/docker.sock` on every container *start* instead. That needs root, so the
-Dockerfile grants `john` a narrowly scoped, passwordless `sudo` for just that `chown` (not blanket root
-access) via `/etc/sudoers.d/john` — note it also disables `requiretty` for `john` specifically, since
+`sudo chown root:dev /var/run/docker.sock` on every container *start* instead. That needs root, so the
+Dockerfile grants `dev` a narrowly scoped, passwordless `sudo` for just that `chown` (not blanket root
+access) via `/etc/sudoers.d/dev` — note it also disables `requiretty` for `dev` specifically, since
 `postStartCommand` execs without a pseudo-TTY and xenial's default sudo build otherwise refuses non-TTY
 NOPASSWD commands. sudo's policy matching is on the exact command given to `sudo` itself, so the
 postStartCommand script calls `sudo chown` directly rather than wrapping it in `sudo bash -c '...'` (which
 would make sudo see "bash" as the command, not matching the scoped rule).
 
-Two earlier versions of this fix were both wrong in different ways. The first added `john` to `docker.sock`'s
+Two earlier versions of this fix were both wrong in different ways. The first added `dev` to `docker.sock`'s
 *existing* owning group (whose GID varies by host/Docker install, resolved and joined via
 `groupadd`/`usermod` at container-start time) instead of chowning it. That doesn't work: supplementary group
 membership is fixed for a process at fork/exec time and only re-read from `/etc/group` on a fresh login, but
 VS Code terminals aren't fresh logins — they're forked from the long-lived `vscode-server` process, which
 itself typically starts within a second of the container (often before `postStartCommand` finishes). Any
 terminal opened in that window inherited `vscode-server`'s stale group list and stayed permanently denied
-access to `docker.sock` for the rest of that VS Code session, even though `id john`/`/etc/group` correctly
+access to `docker.sock` for the rest of that VS Code session, even though `id dev`/`/etc/group` correctly
 showed the fixed membership by then — confirmed by inspecting `/proc/<pid>/status`'s `Groups:` line for a
 stuck terminal, which still read just `1000` (not `0`/root) long after the group-add step had visibly
 succeeded.
@@ -252,14 +252,14 @@ check is re-evaluated by the kernel on every syscall rather than cached per-proc
 the way group membership can — true, but it overshot: `docker.sock` here is a `type=bind` mount (see
 `devcontainer.json`'s `mounts` below), so `chmod`-ing it *inside* the container mutates the *real* host-side
 (or Docker Desktop VM) socket file's permission bits, not a container-local copy. That left the socket
-world-read/write to every process on the host/VM, not just `john` — a materially bigger, longer-lived
+world-read/write to every process on the host/VM, not just `dev` — a materially bigger, longer-lived
 exposure than intended (it persists even after the devcontainer itself stops), which the fix's own
 reasoning at the time didn't account for.
 
-The current fix (`chown root:john`) gets both properties right: it sets the socket's *group* to `john`'s own
+The current fix (`chown root:dev`) gets both properties right: it sets the socket's *group* to `dev`'s own
 **primary** group rather than a supplementary one — fixed at image-build time via `useradd` (gid `1000`),
-so every process running as `john` already carries it from exec, with no login-session/staleness dependency
-at all — and it leaves the socket's mode at its already-`660` default, so only `root` and `john` can reach
+so every process running as `dev` already carries it from exec, with no login-session/staleness dependency
+at all — and it leaves the socket's mode at its already-`660` default, so only `root` and `dev` can reach
 it, same scope as originally intended, without `chmod 666`'s world-writable side effect. One caveat carries
 over from the original group-based approach, though: if the host's Docker daemon/socket is ever recreated
 independently of this devcontainer (e.g. a host-side daemon restart), the new socket file reverts to
@@ -271,16 +271,16 @@ The same sudoers file also grants `chmod -R a+rwX /vscode`, run by `postStartCom
 cache volume (named `vscode`, `external=true` in `devcontainer.json`'s `mounts`). It extracts each VS Code
 Server version as root the first time any devcontainer on the machine uses it, leaving `node` mode `755`
 (no group/other write). The `VSCODE_SERVER_CUSTOM_GLIBC_LINKER`/`_PATH`/`PATCHELF_PATH` env vars above make
-VS Code Server try to patch that same `node` binary in place, as `remoteUser` (`john`), to point it at
-`/opt/vscode-glibc` — which fails with "Permission denied" since `john` doesn't own it, and VS Code's own
+VS Code Server try to patch that same `node` binary in place, as `remoteUser` (`dev`), to point it at
+`/opt/vscode-glibc` — which fails with "Permission denied" since `dev` doesn't own it, and VS Code's own
 patch script doesn't check `patchelf`'s exit code, so it logs "Patching complete" regardless and the
 connection then fails against the still-unpatched binary. Loosening `/vscode`'s permissions on every start
 doesn't fix the very first connection attempt against a brand-new VS Code Server commit (the tree doesn't
 exist yet when `postStartCommand` runs), but it does mean the *next* start after that first failure
 self-heals, rather than staying broken until someone manually fixes the shared volume.
 
-`devcontainer.json` mounts the live repo directly over `/home/john/app` (where the image was built)
-instead of the default `/workspaces/<name>`, and `remoteUser` is `john` (root has no opam switch). Two
+`devcontainer.json` mounts the live repo directly over `/home/dev/app` (where the image was built)
+instead of the default `/workspaces/<name>`, and `remoteUser` is `dev` (root has no opam switch). Two
 named volumes protect `libs/inez` and `libs/scipoptsuite-3.1.1` from being shadowed by that live bind
 mount — those paths hold build output (`inez.top`/`inez.opt`, `libscipopt.so`) that only exists inside the
 pre-built image, not in a fresh git checkout, and (unlike `sudoku_solver_inez/src`'s `sudoku.cma` below)

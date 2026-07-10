@@ -49,18 +49,18 @@
   // so don't manually forward 3000/8080 there either: doing so recreates
   // the identical stale-listener risk by hand.
 
-  // The image is built as user "john" ($HOME=/home/john), and opam's env
+  // The image is built as user "dev" ($HOME=/home/dev), and opam's env
   // (eval `opam config env`, used by sudoku_solver_inez/src/solver.sh) is
-  // only set up under /home/john/.opam. Attaching as root would have no
-  // opam switch at all, so run_solver.sh needs this to be john.
-  "remoteUser": "john",
+  // only set up under /home/dev/.opam. Attaching as root would have no
+  // opam switch at all, so run_solver.sh needs this to be dev.
+  "remoteUser": "dev",
 
   // Bind-mount the live repo directly over the path the image was built at
   // ($HOME/app) instead of the default /workspaces/<name>, so live edits to
   // e.g. sudoku_solver_inez/src land exactly where solver.sh's relative
   // paths (../../libs/inez, ../../libs/scipoptsuite-3.1.1) expect them.
-  "workspaceMount": "source=${localWorkspaceFolder},target=/home/john/app,type=bind,consistency=cached",
-  "workspaceFolder": "/home/john/app",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/home/dev/app,type=bind,consistency=cached",
+  "workspaceFolder": "/home/dev/app",
 
   // docker-compose.yml's bind-mount volume sources (./sudoku_solver_inez,
   // ./sudoku_ui_prj/sudoku-ui-src) are plain relative paths, resolved by the
@@ -69,7 +69,7 @@
   // devcontainer's terminal talks to the real host's Docker daemon over the
   // bind-mounted docker.sock (see the "mounts" entry below) while running
   // inside this container's own filesystem -- so the relative path resolves
-  // to /home/john/app/sudoku_solver_inez, a path that only exists inside
+  // to /home/dev/app/sudoku_solver_inez, a path that only exists inside
   // this devcontainer, not on the actual Docker host. The real daemon then
   // refuses it ("not shared from the host"). HOST_REPO_ROOT gives Compose
   // the real host-side path to prefix those sources with instead, taking
@@ -96,8 +96,8 @@
   // docker CLI (see Dockerfile) a route to the host's Docker daemon so
   // `docker compose up frontend` runs the frontend as a sibling container.
   "mounts": [
-    "source=sudoku-solver-inez-libs-inez,target=/home/john/app/libs/inez,type=volume",
-    "source=sudoku-solver-inez-libs-scip,target=/home/john/app/libs/scipoptsuite-3.1.1,type=volume",
+    "source=sudoku-solver-inez-libs-inez,target=/home/dev/app/libs/inez,type=volume",
+    "source=sudoku-solver-inez-libs-scip,target=/home/dev/app/libs/scipoptsuite-3.1.1,type=volume",
     "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
   ],
 
@@ -109,10 +109,10 @@
   //   gets shadowed by the host source on mount. Rebuild it (fast, ~1s,
   //   incremental) so run_solver.sh has an up-to-date sudoku.cma.
   // - The mounted docker.sock above is root-owned, group "root", mode 660
-  //   (group-writable, no other access) by default, and john (a non-root
+  //   (group-writable, no other access) by default, and dev (a non-root
   //   remoteUser) isn't in that group, so it can't reach the daemon
   //   through it as-is. Two earlier versions of this fix were both wrong:
-  //   adding john to the socket's *existing* group (its GID varies by
+  //   adding dev to the socket's *existing* group (its GID varies by
   //   host/Docker install, resolved and joined via groupadd/usermod at
   //   container-start time) doesn't work because supplementary group
   //   membership is fixed for a process at fork/exec time and only
@@ -127,14 +127,14 @@
   //   `type=bind` mount, so chmod-ing it inside the container mutates the
   //   *real* host-side (or Docker Desktop VM) socket file's permission
   //   bits, leaving it world-read/write to every process on the host/VM,
-  //   not just john -- a much bigger exposure than intended, and one that
+  //   not just dev -- a much bigger exposure than intended, and one that
   //   outlives the devcontainer itself. The fix here instead chowns the
-  //   socket's *group* to john -- not a supplementary group john has to
-  //   be added to at runtime, but john's own primary group (fixed at
+  //   socket's *group* to dev -- not a supplementary group dev has to
+  //   be added to at runtime, but dev's own primary group (fixed at
   //   image-build time via `useradd`, gid 1000), so every process running
-  //   as john already carries it from exec with no login-session
+  //   as dev already carries it from exec with no login-session
   //   dependency at all, and mode stays at its default 660 so only root
-  //   and john can reach it, not the whole host. Needs root, hence the
+  //   and dev can reach it, not the whole host. Needs root, hence the
   //   scoped sudoers rule in Dockerfile. (Same caveat applies to this
   //   approach as the old one, though: if the host's Docker
   //   daemon/socket is ever recreated independently of this devcontainer
@@ -145,16 +145,16 @@
   // - /vscode (VS Code Dev Containers' own shared, cross-project server
   //   cache volume) gets its VS Code Server tarball extracted as root on
   //   first use of any given commit, mode 755 -- unwritable by remoteUser
-  //   john. VS Code's own runtime self-patch step (see
+  //   dev. VS Code's own runtime self-patch step (see
   //   VSCODE_SERVER_CUSTOM_GLIBC_LINKER etc. in Dockerfile) needs to rewrite
-  //   its `node` binary in place as john to point it at /opt/vscode-glibc,
+  //   its `node` binary in place as dev to point it at /opt/vscode-glibc,
   //   which silently fails ("Permission denied", swallowed by VS Code's own
   //   script) without this. Loosen it back up on every start so a fresh VS
   //   Code Server version self-heals on the next start after its first
   //   (failed) connection attempt, rather than staying broken forever.
   "postStartCommand": {
     "rebuild-solver": "bash -lc 'eval `opam config env` && cd ${containerWorkspaceFolder}/sudoku_solver_inez/src && omake'",
-    "docker-socket-perms": "sudo chown root:john /var/run/docker.sock",
+    "docker-socket-perms": "sudo chown root:dev /var/run/docker.sock",
     "fix-vscode-server-perms": "sudo chmod -R a+rwX /vscode"
   }
 }

@@ -71,15 +71,15 @@ RUN mkdir -p /usr/local/lib/docker/cli-plugins && \
 
 # The host's docker.sock (mounted in by devcontainer.json) is root-owned,
 # group "root", mode 660 (group-writable, no other access) -- remoteUser
-# john isn't in that group, so it can't reach the daemon through it as-is.
-# devcontainer.json's postStartCommand chowns the socket's group to john at
+# dev isn't in that group, so it can't reach the daemon through it as-is.
+# devcontainer.json's postStartCommand chowns the socket's group to dev at
 # container *start* time instead (can't be baked into the image; the bind
 # mount only exists once the container is actually running). That step
-# needs root, and postStartCommand runs as remoteUser (john); scope sudo to
+# needs root, and postStartCommand runs as remoteUser (dev); scope sudo to
 # just the commands that step actually runs, not blanket root access.
 #
 # Two earlier versions of this fix were both wrong in different ways:
-# - Adding john to the socket's *existing* group (whose GID varies by
+# - Adding dev to the socket's *existing* group (whose GID varies by
 #   host/Docker install, so it had to be resolved and joined via
 #   groupadd/usermod at container-start time) doesn't work: supplementary
 #   group membership is only re-read from /etc/group on a fresh login, but
@@ -95,19 +95,19 @@ RUN mkdir -p /usr/local/lib/docker/cli-plugins && \
 #   is a `type=bind` mount, so chmod-ing it inside the container mutates
 #   the *real* host-side (or Docker Desktop VM) socket file's permission
 #   bits, not a container-local copy, leaving it world-read/write to every
-#   process on the host/VM, not just john -- a much bigger exposure than
+#   process on the host/VM, not just dev -- a much bigger exposure than
 #   intended, and it persists after the devcontainer itself stops.
-# Instead, chown the socket's *group* to john -- not a supplementary group
-# john has to be added to at runtime, but john's own primary group (fixed
+# Instead, chown the socket's *group* to dev -- not a supplementary group
+# dev has to be added to at runtime, but dev's own primary group (fixed
 # at image-build time via `useradd`, gid 1000, see root Dockerfile), so
-# every process running as john already carries it from exec, with no
+# every process running as dev already carries it from exec, with no
 # login-session/staleness dependency at all. Mode stays at its default 660
-# (group read/write), so only root and john (via that chown) can reach the
+# (group read/write), so only root and dev (via that chown) can reach the
 # socket -- no wider than the original group-based approach intended, and
 # without chmod's world-writable side effect.
 # postStartCommand execs non-interactively (no pseudo-TTY), and xenial's
 # default sudo still enforces requiretty even for NOPASSWD entries -- scope
-# the tty exemption to john specifically, not a global Defaults change.
+# the tty exemption to dev specifically, not a global Defaults change.
 #
 # The other NOPASSWD entry (chmod on /vscode) works around a separate issue:
 # /vscode is VS Code Dev Containers' own shared, cross-project server-install
@@ -116,8 +116,8 @@ RUN mkdir -p /usr/local/lib/docker/cli-plugins && \
 # `node` and friends mode 755 (no group/other write). VS Code's own
 # self-patch step (triggered by VSCODE_SERVER_CUSTOM_GLIBC_LINKER etc. above)
 # then tries to rewrite that same `node` binary in place as remoteUser
-# (john) to point it at /opt/vscode-glibc -- which fails with "Permission
-# denied" since john doesn't own it, and VS Code's patch script doesn't check
+# (dev) to point it at /opt/vscode-glibc -- which fails with "Permission
+# denied" since dev doesn't own it, and VS Code's patch script doesn't check
 # patchelf's exit code, so it silently reports "Patching complete" anyway and
 # the stale unpatched binary keeps failing the same old-glibc check forever.
 # Loosening perms on the whole cache on every start means: the very first
@@ -126,8 +126,8 @@ RUN mkdir -p /usr/local/lib/docker/cli-plugins && \
 # since the postStartCommand below runs before VS Code tries to attach again.
 RUN apt-get update && apt-get install -y --no-install-recommends sudo && \
     rm -rf /var/lib/apt/lists/* && \
-    { echo "john ALL=(root) NOPASSWD: /bin/chown root:john /var/run/docker.sock, /bin/chmod -R a+rwX /vscode"; \
-      echo "Defaults:john !requiretty"; } > /etc/sudoers.d/john && \
-    chmod 0440 /etc/sudoers.d/john
+    { echo "dev ALL=(root) NOPASSWD: /bin/chown root:dev /var/run/docker.sock, /bin/chmod -R a+rwX /vscode"; \
+      echo "Defaults:dev !requiretty"; } > /etc/sudoers.d/dev && \
+    chmod 0440 /etc/sudoers.d/dev
 
-USER john
+USER dev

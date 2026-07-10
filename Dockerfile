@@ -1,10 +1,10 @@
 # Use an official Python runtime as a parent image
 FROM ubuntu:16.04
 
-ARG HOME=/home/john
+ARG HOME=/home/dev
 
-RUN useradd --home-dir $HOME --create-home --shell /bin/bash john
-USER john
+RUN useradd --home-dir $HOME --create-home --shell /bin/bash dev
+USER dev
 WORKDIR $HOME
 # ENV HOME $HOME
 
@@ -15,7 +15,7 @@ SHELL ["/bin/bash", "-i", "-l", "-c"]
 # Copy this directory contents into the container at directory /app
 COPY . ${HOME}/app
 
-RUN chown -R john:john ${HOME}/app
+RUN chown -R dev:dev ${HOME}/app
 
 # package tzdata is needed because ocaml_plugin
 # reads file /etc/localtime. This file is a broken
@@ -54,7 +54,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Performing installs that don't require root permissions
 
-USER john
+USER dev
 
 ARG SUDOKU_SERVICE=${HOME}/app
 
@@ -124,7 +124,7 @@ WORKDIR ${INEZ}
 # libs/inez is a git submodule of github.com/vasilisp/inez, so its own
 # OMakefile.config (which has machine-specific paths, and is gitignored
 # upstream) isn't part of it. This repo tracks a copy pre-filled with the
-# paths this image actually uses (HOME=/home/john, opam's "system" switch).
+# paths this image actually uses (HOME=/home/dev, opam's "system" switch).
 RUN cp ${HOME}/app/docker/inez-OMakefile.config ${INEZ}/OMakefile.config
 
 RUN  eval `opam config env` && \
