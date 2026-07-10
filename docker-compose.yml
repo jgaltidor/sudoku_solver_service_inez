@@ -23,7 +23,7 @@ services:
     # .devcontainer/devcontainer.json's containerEnv) supplies the real host
     # path in that case.
     volumes:
-      - ${HOST_REPO_ROOT:-.}/sudoku_solver_inez:/home/john/app/sudoku_solver_inez
+      - ${HOST_REPO_ROOT:-.}/sudoku_solver_inez:/home/dev/app/sudoku_solver_inez
     # solver.ml itself is fed straight into the Inez OCaml toplevel on every
     # request (see run_solver.sh/solver.sh) rather than compiled, so bind-
     # mounting it needs no rebuild step for that file. sudoku.cma (the
@@ -33,7 +33,7 @@ services:
     # gets shadowed by the (unbuilt) host source. Rebuild it before
     # launching the server, same fix as the devcontainer's own
     # postStartCommand for the same problem.
-    command: bash -c 'eval `opam config env` && cd /home/john/app/sudoku_solver_inez/src && omake && cd /home/john/app/SudokuServer && exec ./run.sh'
+    command: bash -c 'eval `opam config env` && cd /home/dev/app/sudoku_solver_inez/src && omake && cd /home/dev/app/SudokuServer && exec ./run.sh'
 
   frontend:
     build: ./sudoku_ui_prj/sudoku-ui-src
