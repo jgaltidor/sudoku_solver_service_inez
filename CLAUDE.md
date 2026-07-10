@@ -35,13 +35,21 @@ wires them together for real use.
 bash docker/build.sh      # git submodule init + docker compose build (both images)
 bash docker/run.sh        # docker compose up, ports 3000 (UI) and 8080 (API)
 
+# Day-to-day dev loop instead (e.g. from a devcontainer terminal) - both bind-mount
+# live source, see "Docker build architecture" below
+bash scripts/dev-run.sh    # docker compose up -d, then restart backend (fresh omake pass)
+bash scripts/dev-build.sh  # docker compose build, then dev-run.sh - only needed for
+                           # SudokuServer/Java changes or new frontend npm deps, not
+                           # for OCaml solver edits
+
 # SudokuServer (Java)
 cd SudokuServer && mvn package   # also runs JUnit tests (src/test/java)
 mvn test                          # tests only
 bash run.sh                       # java -jar target/SudokuServer-1.0-SNAPSHOT-jar-with-dependencies.jar
 # Example manual request: see SudokuServer/requests/req1.sh, req2.sh, req3.sh
 
-# sudoku_ui_prj (React + Vite)
+# sudoku_ui_prj (React + Vite) - no test script; package.json only has
+# start/build/preview, so there's no frontend test suite to run yet
 cd sudoku_ui_prj && bash build.sh          # npm install inside sudoku-ui-src/
 cd sudoku_ui_prj/sudoku-ui-src && npm start   # Vite dev server on :3000, proxies /api to :8080
 npm run build                              # production build to sudoku-ui-src/dist/
@@ -53,11 +61,24 @@ omake tests.opt && ./tests.opt              # runs sudoku_solver_inez/src/tests.
 ./run_solver.sh < input_board_example.json  # solve a board directly, writes output.json
 ```
 
-Root-level `run.sh` starts both `SudokuServer` and the UI dev server together for local, no-Docker use
-(it's no longer the Docker image's runtime entrypoint now that backend/frontend are split into separate
-containers — each has its own `CMD`, see below). `docker/publish.sh` and `docker/save.sh` operate on
-already-built images (`docker compose push`, `docker save` against both `jgaltidor/sudoku-solver-backend`
-and `jgaltidor/sudoku-solver-frontend`) — they do not rebuild anything.
+`scripts/run-native.sh` starts both `SudokuServer` and the UI dev server together, but only for a fully
+native, no-Docker/no-devcontainer setup — Java+Maven, Node, and the OCaml/opam/Inez/SCIP toolchain all
+installed directly on the machine running it (`SudokuServer`'s jar already built via `mvn package`, and
+`npm install` already run under `sudoku_ui_prj/sudoku-ui-src`). It can't run inside the devcontainer: that
+image deliberately has no Node (see "Devcontainer" below), so its `npm start` step would just fail there.
+It's also not part of the Docker/compose split at all — each container has its own `CMD` now (see below) —
+this script predates that split and was kept only for developers who still work fully outside Docker.
+`docker/publish.sh` and `docker/save.sh` operate on already-built images (`docker compose push`,
+`docker save` against both `jgaltidor/sudoku-solver-backend` and `jgaltidor/sudoku-solver-frontend`) — they
+do not rebuild anything.
+
+`scripts/dev-run.sh`/`dev-build.sh` deliberately keep the `dev-` prefix rather than taking the plain
+`build.sh`/`run.sh` names — those are already `docker/`'s from-scratch build-and-publish scripts, which do
+something meaningfully different (full submodule init, `docker compose build` unconditionally, foreground
+`docker compose up`). Two same-named scripts behaving differently depending on which directory you're in
+would recreate exactly the ambiguity that motivated renaming the old root `run.sh` to `run-native.sh` in the
+first place — better to keep the day-to-day scripts distinguishable by name alone, not just by which
+directory happens to contain them.
 
 ## Docker build architecture
 
@@ -88,9 +109,11 @@ order: apt (old system OCaml + camlp4 + opam + Boost), Java 11 + Maven, `mvn pac
 the SCIP Optimization Suite, `opam init` and pin **Jane Street Core 112.35.01** (old, camlp4-based — do
 not casually bump this or the packages listed after it), build Inez, build `sudoku_solver_inez`. It still
 does `COPY . ${HOME}/app` (the whole monorepo, including the unbuilt `sudoku_ui_prj` source) rather than
-scoping the copy to just the backend's own directories — this is deliberate too, since it lets the
-devcontainer's own Dockerfile (see below) layer Node on top of this same image without needing a second
-`COPY`.
+scoping the copy to just the backend's own directories. That used to be load-bearing — the devcontainer's
+own Dockerfile installed Node on top of this same image and needed the UI source already present — but the
+devcontainer no longer installs Node at all (see "Devcontainer" below, Docker-outside-of-Docker instead),
+so today the broad `COPY` is just an accepted minor inefficiency, not something scoping it down would
+break.
 
 Two vendored dependencies are intentionally *not* plain source trees in git:
 
@@ -117,6 +140,43 @@ via Compose's built-in service-name DNS — see `vite.config.js`. `vite.config.j
 `server.host: true` — Vite's dev server binds loopback-only by default, which is invisible in plain local
 `npm start` use but means the container's published port 3000 (and other containers) can't reach it at
 all once it's actually running inside Docker; this isn't optional.
+
+Both services in `docker-compose.yml` bind-mount their live source over what got baked into the image at
+build time, so `docker compose up` gives an edit-and-see-it dev loop rather than requiring a rebuild per
+change:
+
+- `frontend` mounts `sudoku_ui_prj/sudoku-ui-src` over `/app` (plus an anonymous volume on
+  `/app/node_modules`, so the container's own Linux-native `npm install` isn't shadowed by whatever's — or
+  isn't — in that directory on the host). Vite's dev server picks up saved edits via HMR immediately.
+- `backend` mounts `sudoku_solver_inez` over its counterpart under `/home/john/app`. `solver.ml` itself
+  needs no rebuild step to take effect — it's fed straight into the Inez OCaml toplevel per request rather
+  than compiled (see above) — but the bind mount does shadow the pre-built `sudoku.cma` that the *other*
+  solver modules (`sudoku_board.ml` etc.) compile into, since that file lives inside the same path. The
+  service's `command` override reruns `omake` before launching `SudokuServer` to rebuild it, the same fix
+  `.devcontainer/devcontainer.json`'s `postStartCommand` applies for the same reason (see below).
+
+Changes that do need an image rebuild (Java source, frontend `package.json`) need more than just
+`docker compose build`, though: that only rebuilds the image, it doesn't restart an already-running
+container to use it, so a rebuild with no follow-up `docker compose up` silently leaves the stale container
+running the old image. `scripts/dev-build.sh` chains both steps for exactly this reason — verified with a
+synthetic compose service: `build` alone left a running container on its old image, and only a subsequent
+`up -d` recreated it against the new one.
+
+Since both `build:` and `image:` are set on each service, this cuts the other way too on a fresh clone:
+`docker compose up`/`scripts/dev-run.sh`, run before either image has ever been built locally, *pulls* the
+published `jgaltidor/sudoku-solver-backend`/`-frontend` tags from Docker Hub rather than building from
+local source — verified the same way, deleting a locally-built image and confirming Compose pulled rather
+than building even with a `build:` key present. Harmless for bind-mounted source edits, but a real trap on
+a branch with Dockerfile changes: run `scripts/dev-build.sh` (or `docker/build.sh`) at least once first.
+
+`docker-compose.yml` also pins a top-level `name: sudoku-solver-service`. Without it, Compose derives the
+project name from the basename of the directory containing the file, which differs between a host checkout
+(e.g. `sudoku_solver_service_inez`) and the devcontainer's own bind-mounted workspace (`app`, per
+`.devcontainer/devcontainer.json`'s `workspaceFolder` below) — so `docker compose restart backend` (or any
+other command targeting an already-running container) run from one of those contexts would silently look
+for a different, unrelated project instead of finding the containers actually running, rather than erroring
+in an obvious way. `scripts/dev-run.sh` and `scripts/dev-build.sh` above wrap the day-to-day dev-loop
+commands so this doesn't need to be remembered per-invocation.
 
 ## Devcontainer (`.devcontainer/`)
 
@@ -145,6 +205,13 @@ The official `ghcr.io/devcontainers/features/docker-outside-of-docker` feature w
 Docker CLI + socket wiring, but it refuses to install at all on xenial (its apt-based install path only
 supports a fixed allowlist of newer distro codenames, even with its own `"moby": false` escape hatch) —
 hence the manual static-binary install.
+
+The Claude Code CLI itself is deliberately **not** installed in this devcontainer, for the same reason as
+Node: its native binary dynamically links against a modern glibc/libstdc++ (officially supported on Ubuntu
+20.04+/Debian 10+ — not xenial), across every install method (native installer, npm, apt/dnf/apk), with no
+documented custom-glibc-linker escape hatch the way VS Code Server has. Run Claude Code from the host
+machine (or a plain, non-remote local VS Code window) instead — it edits the same bind-mounted repo either
+way, so there's no functional difference, just where the process itself runs.
 
 `docker.sock`'s owning group has a GID that varies by host/Docker install, so it can't be baked into the
 image at build time — `devcontainer.json`'s `postStartCommand` detects it and adds `john` to a matching

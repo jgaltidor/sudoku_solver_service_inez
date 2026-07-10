@@ -21,16 +21,58 @@ There are package consists of three main components:
   sudoku_ui_prj is implemented using [ReactJS][reactjs].
   This server serves webpages that can be rendered by browsers.
 
-A Docker image running this webservice is available in
-Docker Hub repository `jgaltidor/sudoku_solver_service`.
-This image is easily downloaded to your Docker installation.
+## Running the published service
 
-    docker pull jgaltidor/sudoku_solver_service_inez
+Docker images running this web service are available on Docker Hub as two
+separate images, one per component above that needs its own runtime: `jgaltidor/sudoku-solver-backend`
+(`SudokuServer` + `sudoku_solver_inez`) and `jgaltidor/sudoku-solver-frontend` (`sudoku_ui_prj`). With
+Docker installed and this repository cloned, pull and run both together with:
 
-Running this web service with this Docker image is easily
-performed by executing the following command:
+    docker compose pull
+    docker compose up
 
-    docker run -p 3000:3000 -p 8080:8080 -i jgaltidor/sudoku_solver_service_inez /bin/bash -c '$SUDOKU_SERVICE/run.sh'
+This starts the backend API on port 8080 and the frontend UI on port 3000 — open
+http://localhost:3000 in a browser once both containers are up.
+
+## Development
+
+The easiest way to work on this repo is the included VS Code devcontainer (`.devcontainer/`): it comes
+with the OCaml/Inez/SCIP and Java/Maven toolchains already built, so there's no local install needed for
+either. With the "Dev Containers" extension, open this repository in VS Code and choose
+"Reopen in Container."
+
+From a terminal in the devcontainer (or any machine with Docker installed), the whole system runs via
+`docker compose`, with live source bind-mounted into both containers:
+
+    bash scripts/dev-run.sh    # start (or refresh) both containers
+    bash scripts/dev-build.sh  # rebuild and redeploy - only needed after SudokuServer/Java
+                               # changes or new frontend npm dependencies
+
+Most edits — frontend source, the OCaml solver — take effect without running either command at all; see
+`CLAUDE.md`'s "Docker build architecture" section for exactly what does and doesn't need a rebuild, and
+why. `scripts/` also has `run-native.sh`, for the uncommon case of developing with no Docker/devcontainer
+at all (every toolchain installed directly on the machine instead) — most development should use
+`dev-run.sh`/`dev-build.sh` above rather than this.
+
+The very first time you run `scripts/dev-run.sh` on a fresh clone, if you haven't built the images yet
+(`docker/build.sh` or `docker compose build`), Compose will *pull* the published
+`jgaltidor/sudoku-solver-backend`/`-frontend` images from Docker Hub rather than build from your local
+source — both `build:` and `image:` are set in `docker-compose.yml`, and Compose prefers pulling an
+existing tag over building when the image isn't present locally yet. Bind-mounted source edits still work
+fine either way, but if you're on a branch with Dockerfile changes, run `bash scripts/dev-build.sh` (or
+`docker/build.sh`) at least once first so you're actually running your own build.
+
+`docker/` holds a separate set of scripts (`build.sh`, `run.sh`, `publish.sh`, `save.sh`) for building
+these images from scratch and publishing them to Docker Hub — not for day-to-day development.
+
+### Tests
+
+- `SudokuServer`: `cd SudokuServer && mvn test` (JUnit, also runs as part of `mvn package`).
+- `sudoku_solver_inez`: `cd sudoku_solver_inez/src && omake tests.opt && ./tests.opt`.
+- `sudoku_ui_prj`: no test suite yet — `package.json` only defines `start`/`build`/`preview`.
+
+See `CLAUDE.md` for the full architecture writeup, including the devcontainer's own design and the reasons
+behind its more particular choices.
 
 
 [inez]: https://github.com/vasilisp/inez
