@@ -48,7 +48,8 @@ mvn test                          # tests only
 bash run.sh                       # java -jar target/SudokuServer-1.0-SNAPSHOT-jar-with-dependencies.jar
 # Example manual request: see SudokuServer/requests/req1.sh, req2.sh, req3.sh
 
-# sudoku_ui_prj (React + Vite)
+# sudoku_ui_prj (React + Vite) - no test script; package.json only has
+# start/build/preview, so there's no frontend test suite to run yet
 cd sudoku_ui_prj && bash build.sh          # npm install inside sudoku-ui-src/
 cd sudoku_ui_prj/sudoku-ui-src && npm start   # Vite dev server on :3000, proxies /api to :8080
 npm run build                              # production build to sudoku-ui-src/dist/
@@ -160,6 +161,13 @@ container to use it, so a rebuild with no follow-up `docker compose up` silently
 running the old image. `scripts/dev-build.sh` chains both steps for exactly this reason — verified with a
 synthetic compose service: `build` alone left a running container on its old image, and only a subsequent
 `up -d` recreated it against the new one.
+
+Since both `build:` and `image:` are set on each service, this cuts the other way too on a fresh clone:
+`docker compose up`/`scripts/dev-run.sh`, run before either image has ever been built locally, *pulls* the
+published `jgaltidor/sudoku-solver-backend`/`-frontend` tags from Docker Hub rather than building from
+local source — verified the same way, deleting a locally-built image and confirming Compose pulled rather
+than building even with a `build:` key present. Harmless for bind-mounted source edits, but a real trap on
+a branch with Dockerfile changes: run `scripts/dev-build.sh` (or `docker/build.sh`) at least once first.
 
 `docker-compose.yml` also pins a top-level `name: sudoku-solver-service`. Without it, Compose derives the
 project name from the basename of the directory containing the file, which differs between a host checkout

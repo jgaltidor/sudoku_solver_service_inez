@@ -54,8 +54,22 @@ why. `scripts/` also has `run-native.sh`, for the uncommon case of developing wi
 at all (every toolchain installed directly on the machine instead) — most development should use
 `dev-run.sh`/`dev-build.sh` above rather than this.
 
+The very first time you run `scripts/dev-run.sh` on a fresh clone, if you haven't built the images yet
+(`docker/build.sh` or `docker compose build`), Compose will *pull* the published
+`jgaltidor/sudoku-solver-backend`/`-frontend` images from Docker Hub rather than build from your local
+source — both `build:` and `image:` are set in `docker-compose.yml`, and Compose prefers pulling an
+existing tag over building when the image isn't present locally yet. Bind-mounted source edits still work
+fine either way, but if you're on a branch with Dockerfile changes, run `bash scripts/dev-build.sh` (or
+`docker/build.sh`) at least once first so you're actually running your own build.
+
 `docker/` holds a separate set of scripts (`build.sh`, `run.sh`, `publish.sh`, `save.sh`) for building
 these images from scratch and publishing them to Docker Hub — not for day-to-day development.
+
+### Tests
+
+- `SudokuServer`: `cd SudokuServer && mvn test` (JUnit, also runs as part of `mvn package`).
+- `sudoku_solver_inez`: `cd sudoku_solver_inez/src && omake tests.opt && ./tests.opt`.
+- `sudoku_ui_prj`: no test suite yet — `package.json` only defines `start`/`build`/`preview`.
 
 See `CLAUDE.md` for the full architecture writeup, including the devcontainer's own design and the reasons
 behind its more particular choices.

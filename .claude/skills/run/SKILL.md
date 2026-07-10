@@ -26,6 +26,12 @@ bash scripts/dev-build.sh  # rebuild the image(s) AND redeploy - chains into dev
 
 Both scripts are idempotent — safe to run repeatedly, and safe to run even if the stack isn't up yet.
 
+On a fresh clone with no image ever built locally, `dev-run.sh` will *pull* the published
+`jgaltidor/sudoku-solver-backend`/`-frontend` images from Docker Hub instead of building from local source
+(Compose prefers pulling an existing tag over building when both `build:` and `image:` are set and nothing
+is built locally yet). Fine for bind-mounted source edits, but if there are local Dockerfile changes not
+yet published, run `scripts/dev-build.sh` (or `docker/build.sh`) once first.
+
 ## Verifying it worked
 
 ```bash
