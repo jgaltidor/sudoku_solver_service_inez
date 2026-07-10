@@ -6,10 +6,23 @@ type t = {
 }
 ;;
 
+(* Accepts either the server's own wire format ("input_board" +
+ * "output_file", as written by SudokuServer/App.java) or the simpler
+ * public "board"-only format used by the HTTP API request body and
+ * input_board_example.json, so a user-supplied board file can be fed
+ * straight in as-is via scripts/solve.sh without any conversion step. *)
 let config_of_json json =
   let open Yojson.Basic.Util in
-  let input_board_json = json |> member "input_board" in
-  let output_file = json |> member "output_file" |> to_string in
+  let input_board_json =
+    match json |> member "input_board" with
+    | `Null -> json |> member "board"
+    | board_json -> board_json
+  in
+  let output_file =
+    match json |> member "output_file" with
+    | `String filename -> filename
+    | _ -> "output.json"
+  in
   let input_board = Sudoku_board.board_of_json input_board_json in
   {
     input_board = input_board ;

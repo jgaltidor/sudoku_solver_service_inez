@@ -58,8 +58,21 @@ npm run build                              # production build to sudoku-ui-src/d
 cd sudoku_solver_inez/src
 eval `opam config env` && omake             # builds the "sudoku" OCamlLibrary (sudoku_board, sudoku_config, sudoku_entry, utils)
 omake tests.opt && ./tests.opt              # runs sudoku_solver_inez/src/tests.ml
-./run_solver.sh < input_board_example.json  # solve a board directly, writes output.json
+
+# Solve a board directly, from any directory (see README.md's "Solving a board
+# from the command line" section) - preferred over invoking run_solver.sh by hand:
+bash scripts/solve_example.sh                                   # bundled example, prints input + result
+bash scripts/solve.sh scripts/example_input.json                # equivalent, explicit form
 ```
+
+`run_solver.sh` itself takes no arguments and reads no stdin (a `run_solver.sh < some_file.json` you might
+see elsewhere is a no-op: `run_solver.sh` never references its own stdin, and the `< $*` redirect inside
+the `solver.sh` it calls instead feeds `solver.ml`'s own OCaml source into `inez.top`'s stdin — that's the
+mechanism by which `solver.ml` gets interpreted, not a way to pass board data). The board actually comes
+from `Sudoku_config.create ()` (`sudoku_config.ml`) opening a file literally named `sudoku_config.json` in
+whatever directory `run_solver.sh` is run from — never an argument or stdin. `scripts/solve.sh` above
+handles this for you (private temp working directory per invocation, same trick `App.java` uses per HTTP
+request) instead of requiring `sudoku_config.json` to exist in your current directory by hand.
 
 `scripts/run-native.sh` starts both `SudokuServer` and the UI dev server together, but only for a fully
 native, no-Docker/no-devcontainer setup — Java+Maven, Node, and the OCaml/opam/Inez/SCIP toolchain all
@@ -276,8 +289,16 @@ VS Code Server try to patch that same `node` binary in place, as `remoteUser` (`
 patch script doesn't check `patchelf`'s exit code, so it logs "Patching complete" regardless and the
 connection then fails against the still-unpatched binary. Loosening `/vscode`'s permissions on every start
 doesn't fix the very first connection attempt against a brand-new VS Code Server commit (the tree doesn't
-exist yet when `postStartCommand` runs), but it does mean the *next* start after that first failure
-self-heals, rather than staying broken until someone manually fixes the shared volume.
+exist yet when `postStartCommand` runs) — the intent was for the *next* start after that first failure to
+self-heal, but in practice (confirmed against VS Code Dev Containers 0.463.0) it doesn't: `postStartCommand`
+only runs once the VS Code Server connection itself succeeds, so a failed first connection means
+`postStartCommand` never ran, and a second attempt against the same container hits the exact same
+"Permission denied" failure, indefinitely — simply retrying "Reopen in Container" does not fix this. Break
+the deadlock by hand instead: find the running/stopped container (`docker ps -a`), then run
+`postStartCommand`'s two commands directly against it —
+`docker exec -u root <container_id> chmod -R a+rwX /vscode` and
+`docker exec -u root <container_id> chown root:dev /var/run/docker.sock` — then retry the connection, which
+now succeeds since `/vscode` is writable before `patchelf` needs it.
 
 `devcontainer.json` mounts the live repo directly over `/home/dev/app` (where the image was built)
 instead of the default `/workspaces/<name>`, and `remoteUser` is `dev` (root has no opam switch). Two
