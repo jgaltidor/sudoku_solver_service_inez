@@ -69,12 +69,20 @@ RUN mkdir -p /usr/local/lib/docker/cli-plugins && \
       -o /usr/local/lib/docker/cli-plugins/docker-compose && \
     chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
-# The host's docker.sock (mounted in by devcontainer.json) is owned by a
-# group whose GID varies per host/Docker install, so it can't be baked in
-# at image-build time -- devcontainer.json's postStartCommand matches john
-# into that group at container *start* time instead. That step needs root,
-# and postStartCommand runs as remoteUser (john); scope sudo to just the
-# commands that step actually runs, not blanket root access.
+# The host's docker.sock (mounted in by devcontainer.json) is root-owned
+# with no group/other write access, so remoteUser john can't reach the
+# daemon through it as-is -- devcontainer.json's postStartCommand chmods it
+# open at container *start* time instead (can't be baked into the image;
+# the bind mount only exists once the container is actually running). That
+# step needs root, and postStartCommand runs as remoteUser (john); scope
+# sudo to just the commands that step actually runs, not blanket root
+# access. (An earlier version of this fix added john to the socket's own
+# group instead of chmod-ing it, but group membership only gets re-read on
+# a fresh login -- any terminal already forked from vscode-server before
+# that step finished stayed permanently denied for the rest of the VS Code
+# session, a real race on every container start. chmod's file-mode check is
+# re-evaluated by the kernel on every syscall, so it can't go stale the same
+# way.)
 # postStartCommand execs non-interactively (no pseudo-TTY), and xenial's
 # default sudo still enforces requiretty even for NOPASSWD entries -- scope
 # the tty exemption to john specifically, not a global Defaults change.
@@ -96,7 +104,7 @@ RUN mkdir -p /usr/local/lib/docker/cli-plugins && \
 # since the postStartCommand below runs before VS Code tries to attach again.
 RUN apt-get update && apt-get install -y --no-install-recommends sudo && \
     rm -rf /var/lib/apt/lists/* && \
-    { echo "john ALL=(root) NOPASSWD: /usr/sbin/groupadd, /usr/sbin/usermod, /bin/chmod -R a+rwX /vscode"; \
+    { echo "john ALL=(root) NOPASSWD: /bin/chmod 666 /var/run/docker.sock, /bin/chmod -R a+rwX /vscode"; \
       echo "Defaults:john !requiretty"; } > /etc/sudoers.d/john && \
     chmod 0440 /etc/sudoers.d/john
 

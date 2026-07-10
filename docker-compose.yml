@@ -13,8 +13,17 @@ services:
     image: jgaltidor/sudoku-solver-backend:latest
     ports:
       - "8080:8080"
+    # ${HOST_REPO_ROOT:-.} rather than a plain "." -- from a regular host
+    # checkout HOST_REPO_ROOT is unset and this resolves the same as before,
+    # but "docker compose" run inside the devcontainer talks to the real
+    # host's Docker daemon (docker.sock is bind-mounted in) while resolving
+    # relative paths against its own, different filesystem, so a plain "."
+    # there would resolve to a devcontainer-only path the real daemon has
+    # never heard of and refuses to bind-mount. HOST_REPO_ROOT (set in
+    # .devcontainer/devcontainer.json's containerEnv) supplies the real host
+    # path in that case.
     volumes:
-      - ./sudoku_solver_inez:/home/john/app/sudoku_solver_inez
+      - ${HOST_REPO_ROOT:-.}/sudoku_solver_inez:/home/john/app/sudoku_solver_inez
     # solver.ml itself is fed straight into the Inez OCaml toplevel on every
     # request (see run_solver.sh/solver.sh) rather than compiled, so bind-
     # mounting it needs no rebuild step for that file. sudoku.cma (the
@@ -36,5 +45,5 @@ services:
     depends_on:
       - backend
     volumes:
-      - ./sudoku_ui_prj/sudoku-ui-src:/app
+      - ${HOST_REPO_ROOT:-.}/sudoku_ui_prj/sudoku-ui-src:/app
       - /app/node_modules
