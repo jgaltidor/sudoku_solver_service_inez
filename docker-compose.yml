@@ -4,6 +4,18 @@ services:
     image: jgaltidor/sudoku-solver-backend:latest
     ports:
       - "8080:8080"
+    volumes:
+      - ./sudoku_solver_inez:/home/john/app/sudoku_solver_inez
+    # solver.ml itself is fed straight into the Inez OCaml toplevel on every
+    # request (see run_solver.sh/solver.sh) rather than compiled, so bind-
+    # mounting it needs no rebuild step for that file. sudoku.cma (the
+    # OMakefile-built library the other solver modules compile into,
+    # loaded by solver.init) is different -- it's baked into the image at
+    # build time but lives inside the path just bind-mounted over, so it
+    # gets shadowed by the (unbuilt) host source. Rebuild it before
+    # launching the server, same fix as the devcontainer's own
+    # postStartCommand for the same problem.
+    command: bash -c 'eval `opam config env` && cd /home/john/app/sudoku_solver_inez/src && omake && cd /home/john/app/SudokuServer && exec ./run.sh'
 
   frontend:
     build: ./sudoku_ui_prj/sudoku-ui-src
@@ -14,3 +26,6 @@ services:
       API_PROXY_TARGET: http://backend:8080
     depends_on:
       - backend
+    volumes:
+      - ./sudoku_ui_prj/sudoku-ui-src:/app
+      - /app/node_modules

@@ -118,6 +118,20 @@ via Compose's built-in service-name DNS — see `vite.config.js`. `vite.config.j
 `npm start` use but means the container's published port 3000 (and other containers) can't reach it at
 all once it's actually running inside Docker; this isn't optional.
 
+Both services in `docker-compose.yml` bind-mount their live source over what got baked into the image at
+build time, so `docker compose up` gives an edit-and-see-it dev loop rather than requiring a rebuild per
+change:
+
+- `frontend` mounts `sudoku_ui_prj/sudoku-ui-src` over `/app` (plus an anonymous volume on
+  `/app/node_modules`, so the container's own Linux-native `npm install` isn't shadowed by whatever's — or
+  isn't — in that directory on the host). Vite's dev server picks up saved edits via HMR immediately.
+- `backend` mounts `sudoku_solver_inez` over its counterpart under `/home/john/app`. `solver.ml` itself
+  needs no rebuild step to take effect — it's fed straight into the Inez OCaml toplevel per request rather
+  than compiled (see above) — but the bind mount does shadow the pre-built `sudoku.cma` that the *other*
+  solver modules (`sudoku_board.ml` etc.) compile into, since that file lives inside the same path. The
+  service's `command` override reruns `omake` before launching `SudokuServer` to rebuild it, the same fix
+  `.devcontainer/devcontainer.json`'s `postStartCommand` applies for the same reason (see below).
+
 ## Devcontainer (`.devcontainer/`)
 
 `.devcontainer/Dockerfile` builds `FROM jgaltidor/sudoku-solver-backend:latest` (the published backend
