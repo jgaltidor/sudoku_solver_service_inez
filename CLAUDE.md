@@ -70,6 +70,14 @@ this script predates that split and was kept only for developers who still work 
 `docker save` against both `jgaltidor/sudoku-solver-backend` and `jgaltidor/sudoku-solver-frontend`) — they
 do not rebuild anything.
 
+`scripts/dev-run.sh`/`dev-rebuild.sh` deliberately keep the `dev-` prefix rather than taking the plain
+`build.sh`/`run.sh` names — those are already `docker/`'s from-scratch build-and-publish scripts, which do
+something meaningfully different (full submodule init, `docker compose build` unconditionally, foreground
+`docker compose up`). Two same-named scripts behaving differently depending on which directory you're in
+would recreate exactly the ambiguity that motivated renaming the old root `run.sh` to `run-native.sh` in the
+first place — better to keep the day-to-day scripts distinguishable by name alone, not just by which
+directory happens to contain them.
+
 ## Docker build architecture
 
 Two independent images, wired together by the root `docker-compose.yml`:
