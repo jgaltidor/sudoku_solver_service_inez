@@ -44,7 +44,10 @@
   // connection to is arbitrary, so requests would intermittently hang
   // against the dead VS Code tunnel instead of reaching Docker's live one.
   // Losing the auto-detected Ports panel entry is a worthwhile trade to
-  // avoid that whole class of bug.
+  // avoid the *automatic* trigger for that bug class -- it doesn't remove
+  // VS Code's manual "Forward a Port" action from the Ports panel, though,
+  // so don't manually forward 3000/8080 there either: doing so recreates
+  // the identical stale-listener risk by hand.
 
   // The image is built as user "john" ($HOME=/home/john), and opam's env
   // (eval `opam config env`, used by sudoku_solver_inez/src/solver.sh) is
@@ -105,23 +108,40 @@
   //   workspace (unlike libs/inez and libs/scipoptsuite-3.1.1 above), so it
   //   gets shadowed by the host source on mount. Rebuild it (fast, ~1s,
   //   incremental) so run_solver.sh has an up-to-date sudoku.cma.
-  // - The mounted docker.sock above is root-owned with no group/other write
-  //   access by default, so john (a non-root remoteUser) can't reach the
-  //   daemon through it as-is. A prior version of this fix added john to
-  //   the socket's owning group (its GID varies by host/Docker install, so
-  //   that group had to be resolved and joined at container-start time, not
-  //   baked into the image) -- but group membership is fixed for a process
-  //   at fork/exec time and only re-read from /etc/group on a fresh login,
-  //   so any VS Code terminal forked from the vscode-server process that
-  //   was already running before this step completed (a real race on every
-  //   container start, not a one-off) stayed stuck with the daemon
-  //   permanently denied for that whole VS Code session, even after this
-  //   step visibly succeeded. chmod-ing the socket's mode instead sidesteps
-  //   that: file-mode permission checks are re-evaluated by the kernel on
-  //   every syscall, so it can't go stale the same way -- a terminal
-  //   spawned before this line finishes still sees the fix the moment it
-  //   completes, no restart needed. Needs root, hence the scoped sudoers
-  //   rule in Dockerfile.
+  // - The mounted docker.sock above is root-owned, group "root", mode 660
+  //   (group-writable, no other access) by default, and john (a non-root
+  //   remoteUser) isn't in that group, so it can't reach the daemon
+  //   through it as-is. Two earlier versions of this fix were both wrong:
+  //   adding john to the socket's *existing* group (its GID varies by
+  //   host/Docker install, resolved and joined via groupadd/usermod at
+  //   container-start time) doesn't work because supplementary group
+  //   membership is fixed for a process at fork/exec time and only
+  //   re-read from /etc/group on a fresh login -- any VS Code terminal
+  //   forked from the vscode-server process that was already running
+  //   before that step completed (a real race on every container start,
+  //   not a one-off) stayed stuck with the daemon permanently denied for
+  //   that whole VS Code session, even after the step visibly succeeded.
+  //   `chmod 666`-ing the socket avoided that race (file-mode checks are
+  //   re-evaluated by the kernel on every syscall, so they can't go stale
+  //   per-process the same way) but overshot: docker.sock is a
+  //   `type=bind` mount, so chmod-ing it inside the container mutates the
+  //   *real* host-side (or Docker Desktop VM) socket file's permission
+  //   bits, leaving it world-read/write to every process on the host/VM,
+  //   not just john -- a much bigger exposure than intended, and one that
+  //   outlives the devcontainer itself. The fix here instead chowns the
+  //   socket's *group* to john -- not a supplementary group john has to
+  //   be added to at runtime, but john's own primary group (fixed at
+  //   image-build time via `useradd`, gid 1000), so every process running
+  //   as john already carries it from exec with no login-session
+  //   dependency at all, and mode stays at its default 660 so only root
+  //   and john can reach it, not the whole host. Needs root, hence the
+  //   scoped sudoers rule in Dockerfile. (Same caveat applies to this
+  //   approach as the old one, though: if the host's Docker
+  //   daemon/socket is ever recreated independently of this devcontainer
+  //   -- e.g. a host-side daemon restart -- the new socket file reverts
+  //   to root:root and this chown needs to run again, which happens
+  //   automatically on the *next* devcontainer start, same self-heal
+  //   pattern as /vscode below, but not mid-session.)
   // - /vscode (VS Code Dev Containers' own shared, cross-project server
   //   cache volume) gets its VS Code Server tarball extracted as root on
   //   first use of any given commit, mode 755 -- unwritable by remoteUser
@@ -134,7 +154,7 @@
   //   (failed) connection attempt, rather than staying broken forever.
   "postStartCommand": {
     "rebuild-solver": "bash -lc 'eval `opam config env` && cd ${containerWorkspaceFolder}/sudoku_solver_inez/src && omake'",
-    "docker-socket-perms": "sudo chmod 666 /var/run/docker.sock",
+    "docker-socket-perms": "sudo chown root:john /var/run/docker.sock",
     "fix-vscode-server-perms": "sudo chmod -R a+rwX /vscode"
   }
 }

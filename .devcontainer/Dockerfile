@@ -69,25 +69,47 @@ RUN mkdir -p /usr/local/lib/docker/cli-plugins && \
       -o /usr/local/lib/docker/cli-plugins/docker-compose && \
     chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
-# The host's docker.sock (mounted in by devcontainer.json) is root-owned
-# with no group/other write access, so remoteUser john can't reach the
-# daemon through it as-is -- devcontainer.json's postStartCommand chmods it
-# open at container *start* time instead (can't be baked into the image;
-# the bind mount only exists once the container is actually running). That
-# step needs root, and postStartCommand runs as remoteUser (john); scope
-# sudo to just the commands that step actually runs, not blanket root
-# access. (An earlier version of this fix added john to the socket's own
-# group instead of chmod-ing it, but group membership only gets re-read on
-# a fresh login -- any terminal already forked from vscode-server before
-# that step finished stayed permanently denied for the rest of the VS Code
-# session, a real race on every container start. chmod's file-mode check is
-# re-evaluated by the kernel on every syscall, so it can't go stale the same
-# way.)
+# The host's docker.sock (mounted in by devcontainer.json) is root-owned,
+# group "root", mode 660 (group-writable, no other access) -- remoteUser
+# john isn't in that group, so it can't reach the daemon through it as-is.
+# devcontainer.json's postStartCommand chowns the socket's group to john at
+# container *start* time instead (can't be baked into the image; the bind
+# mount only exists once the container is actually running). That step
+# needs root, and postStartCommand runs as remoteUser (john); scope sudo to
+# just the commands that step actually runs, not blanket root access.
+#
+# Two earlier versions of this fix were both wrong in different ways:
+# - Adding john to the socket's *existing* group (whose GID varies by
+#   host/Docker install, so it had to be resolved and joined via
+#   groupadd/usermod at container-start time) doesn't work: supplementary
+#   group membership is only re-read from /etc/group on a fresh login, but
+#   VS Code terminals aren't fresh logins -- they're forked from the
+#   long-lived vscode-server process, which typically starts within a
+#   second of the container (often before this step finishes). Any
+#   terminal opened in that window stayed permanently denied for the rest
+#   of the VS Code session, even after the group-add step visibly
+#   succeeded.
+# - `chmod 666 /var/run/docker.sock` avoids that race (the kernel
+#   re-evaluates a file-mode check on every syscall, so it can't go stale
+#   per-process the way group membership can) but overshoots: docker.sock
+#   is a `type=bind` mount, so chmod-ing it inside the container mutates
+#   the *real* host-side (or Docker Desktop VM) socket file's permission
+#   bits, not a container-local copy, leaving it world-read/write to every
+#   process on the host/VM, not just john -- a much bigger exposure than
+#   intended, and it persists after the devcontainer itself stops.
+# Instead, chown the socket's *group* to john -- not a supplementary group
+# john has to be added to at runtime, but john's own primary group (fixed
+# at image-build time via `useradd`, gid 1000, see root Dockerfile), so
+# every process running as john already carries it from exec, with no
+# login-session/staleness dependency at all. Mode stays at its default 660
+# (group read/write), so only root and john (via that chown) can reach the
+# socket -- no wider than the original group-based approach intended, and
+# without chmod's world-writable side effect.
 # postStartCommand execs non-interactively (no pseudo-TTY), and xenial's
 # default sudo still enforces requiretty even for NOPASSWD entries -- scope
 # the tty exemption to john specifically, not a global Defaults change.
 #
-# The third NOPASSWD entry (chmod on /vscode) works around a separate issue:
+# The other NOPASSWD entry (chmod on /vscode) works around a separate issue:
 # /vscode is VS Code Dev Containers' own shared, cross-project server-install
 # cache volume (named "vscode", external=true -- not something this project
 # creates or owns). It extracts the VS Code Server tarball as root, leaving
@@ -104,7 +126,7 @@ RUN mkdir -p /usr/local/lib/docker/cli-plugins && \
 # since the postStartCommand below runs before VS Code tries to attach again.
 RUN apt-get update && apt-get install -y --no-install-recommends sudo && \
     rm -rf /var/lib/apt/lists/* && \
-    { echo "john ALL=(root) NOPASSWD: /bin/chmod 666 /var/run/docker.sock, /bin/chmod -R a+rwX /vscode"; \
+    { echo "john ALL=(root) NOPASSWD: /bin/chown root:john /var/run/docker.sock, /bin/chmod -R a+rwX /vscode"; \
       echo "Defaults:john !requiretty"; } > /etc/sudoers.d/john && \
     chmod 0440 /etc/sudoers.d/john
 

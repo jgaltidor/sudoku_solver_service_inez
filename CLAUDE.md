@@ -224,29 +224,47 @@ documented custom-glibc-linker escape hatch the way VS Code Server has. Run Clau
 machine (or a plain, non-remote local VS Code window) instead — it edits the same bind-mounted repo either
 way, so there's no functional difference, just where the process itself runs.
 
-`docker.sock` is root-owned with no group/other write access, and it's a bind mount that only exists once
-the container is actually running, so the fix can't be baked into the image at build time —
-`devcontainer.json`'s `postStartCommand` runs `sudo chmod 666 /var/run/docker.sock` on every container
-*start* instead. That needs root, so the Dockerfile grants `john` a narrowly scoped, passwordless `sudo`
-for just that `chmod` (not blanket root access) via `/etc/sudoers.d/john` — note it also disables
-`requiretty` for `john` specifically, since `postStartCommand` execs without a pseudo-TTY and xenial's
-default sudo build otherwise refuses non-TTY NOPASSWD commands. sudo's policy matching is on the exact
-command given to `sudo` itself, so the postStartCommand script calls `sudo chmod` directly rather than
-wrapping it in `sudo bash -c '...'` (which would make sudo see "bash" as the command, not matching the
-scoped rule).
+`docker.sock` is root-owned, group `root`, mode `660` (group-writable, no other access) by default, and
+it's a bind mount that only exists once the container is actually running, so the fix can't be baked into
+the image at build time — `devcontainer.json`'s `postStartCommand` runs
+`sudo chown root:john /var/run/docker.sock` on every container *start* instead. That needs root, so the
+Dockerfile grants `john` a narrowly scoped, passwordless `sudo` for just that `chown` (not blanket root
+access) via `/etc/sudoers.d/john` — note it also disables `requiretty` for `john` specifically, since
+`postStartCommand` execs without a pseudo-TTY and xenial's default sudo build otherwise refuses non-TTY
+NOPASSWD commands. sudo's policy matching is on the exact command given to `sudo` itself, so the
+postStartCommand script calls `sudo chown` directly rather than wrapping it in `sudo bash -c '...'` (which
+would make sudo see "bash" as the command, not matching the scoped rule).
 
-An earlier version of this fix added `john` to `docker.sock`'s owning group (whose GID varies by
-host/Docker install, resolved and joined at container-start time) instead of chmod-ing the socket. That
-approach was wrong: group membership is fixed for a process at fork/exec time and only re-read from
-`/etc/group` on a fresh login, but VS Code terminals aren't fresh logins — they're forked from the
-long-lived `vscode-server` process, which itself typically starts within a second of the container (often
-before `postStartCommand` finishes). Any terminal opened in that window inherited `vscode-server`'s stale
-group list and stayed permanently denied access to `docker.sock` for the rest of that VS Code session, even
-though `id john`/`/etc/group` correctly showed the fixed membership by then — confirmed by inspecting
-`/proc/<pid>/status`'s `Groups:` line for a stuck terminal, which still read just `1000` (not `0`/root) long
-after the group-add step had visibly succeeded. `chmod`'s file-mode check is re-evaluated by the kernel on
-every syscall rather than cached per-process, so it can't go stale the same way — a terminal spawned before
-the `chmod` runs still gets access the instant it completes, no restart needed.
+Two earlier versions of this fix were both wrong in different ways. The first added `john` to `docker.sock`'s
+*existing* owning group (whose GID varies by host/Docker install, resolved and joined via
+`groupadd`/`usermod` at container-start time) instead of chowning it. That doesn't work: supplementary group
+membership is fixed for a process at fork/exec time and only re-read from `/etc/group` on a fresh login, but
+VS Code terminals aren't fresh logins — they're forked from the long-lived `vscode-server` process, which
+itself typically starts within a second of the container (often before `postStartCommand` finishes). Any
+terminal opened in that window inherited `vscode-server`'s stale group list and stayed permanently denied
+access to `docker.sock` for the rest of that VS Code session, even though `id john`/`/etc/group` correctly
+showed the fixed membership by then — confirmed by inspecting `/proc/<pid>/status`'s `Groups:` line for a
+stuck terminal, which still read just `1000` (not `0`/root) long after the group-add step had visibly
+succeeded.
+
+The second version replaced that with `sudo chmod 666 /var/run/docker.sock`, reasoning that a file-mode
+check is re-evaluated by the kernel on every syscall rather than cached per-process, so it can't go stale
+the way group membership can — true, but it overshot: `docker.sock` here is a `type=bind` mount (see
+`devcontainer.json`'s `mounts` below), so `chmod`-ing it *inside* the container mutates the *real* host-side
+(or Docker Desktop VM) socket file's permission bits, not a container-local copy. That left the socket
+world-read/write to every process on the host/VM, not just `john` — a materially bigger, longer-lived
+exposure than intended (it persists even after the devcontainer itself stops), which the fix's own
+reasoning at the time didn't account for.
+
+The current fix (`chown root:john`) gets both properties right: it sets the socket's *group* to `john`'s own
+**primary** group rather than a supplementary one — fixed at image-build time via `useradd` (gid `1000`),
+so every process running as `john` already carries it from exec, with no login-session/staleness dependency
+at all — and it leaves the socket's mode at its already-`660` default, so only `root` and `john` can reach
+it, same scope as originally intended, without `chmod 666`'s world-writable side effect. One caveat carries
+over from the original group-based approach, though: if the host's Docker daemon/socket is ever recreated
+independently of this devcontainer (e.g. a host-side daemon restart), the new socket file reverts to
+`root:root` and this `chown` needs to run again — which happens automatically on the *next* devcontainer
+start (same self-heal pattern as `/vscode` below), but not automatically mid-session.
 
 The same sudoers file also grants `chmod -R a+rwX /vscode`, run by `postStartCommand` on every start.
 `/vscode` isn't a path in this repo — it's VS Code Dev Containers' own shared, cross-project server-install
@@ -281,8 +299,10 @@ torn down when the devcontainer it was pointed at is recreated (e.g. after a `de
 The result: two processes bound to `localhost:<port>` at once, one live (Docker's) and one stale (VS
 Code's), and which one actually answers a given connection is arbitrary — symptom was `localhost:3000`
 timing out over IPv4 while still answering over IPv6, traced to a leftover `Code Helper` process still
-listening on `127.0.0.1:3000` from a since-recreated container instance. Not declaring the ports at all
-avoids this class of bug entirely; the cost is just not having auto-labeled entries in the Ports panel.
+listening on `127.0.0.1:3000` from a since-recreated container instance. Not declaring the ports avoids the
+*automatic* trigger for this bug class; the cost is just not having auto-labeled entries in the Ports panel.
+It doesn't remove VS Code's manual "Forward a Port" action from the Ports panel, though — manually
+forwarding 3000/8080 there recreates the identical stale-listener risk by hand, so don't.
 
 ## Notes
 
