@@ -6,9 +6,13 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.stream.Stream;
 
 import fi.iki.elonen.NanoHTTPD;
 
@@ -101,7 +105,14 @@ public class App extends NanoHTTPD
     try {
       JSONParser parser = new JSONParser();
       JSONObject postRequestJson = (JSONObject) parser.parse(postBody);
-      writeSudokuConfigFile(postRequestJson);
+      String solverResults = solve(postRequestJson);
+      System.out.println(solverResults);
+      Response response = newFixedLengthResponse(
+        NanoHTTPD.Response.Status.OK,
+        NanoHTTPD.MIME_PLAINTEXT,
+        solverResults);
+      response.addHeader("Access-Control-Allow-Origin", "*");
+      return response;
     }
     catch(ParseException e) {
       return newFixedLengthResponse(
@@ -111,69 +122,87 @@ public class App extends NanoHTTPD
       return newFixedLengthResponse(
           "SERVER INTERNAL ERROR: IOException: " + e.getMessage() + '\n');
     }
-    try {
-      String solverResults = runSolver();
-      System.out.println(solverResults);
-      Response response = newFixedLengthResponse(
-        NanoHTTPD.Response.Status.OK,
-        NanoHTTPD.MIME_PLAINTEXT,
-        solverResults);
-      response.addHeader("Access-Control-Allow-Origin", "*");
-      return response;
-    }
-    catch(IOException e) {
-      return newFixedLengthResponse(
-        "SERVER INTERNAL ERROR: IOException: " + e.getMessage() + '\n');
-    }
     catch(InterruptedException e) {
       return newFixedLengthResponse(
         "SERVER INTERNAL ERROR: InterruptedException: " + e.getMessage() + '\n');
     }
   }
 
-  private String runSolver() throws IOException, InterruptedException {
-    File sudokuOutputFile = getSudokuOutputFile();
-    getSudokuOutputFile().delete();
-    String command = getSolverScript().getCanonicalPath();
-    execute(command);
-    String solverResults = readFile(sudokuOutputFile);
-    return solverResults;
+  /**
+   * Runs the solver for a single request in its own private working
+   * directory, so concurrent requests can't race on the shared
+   * sudoku_config.json/sudoku_output.json filenames the solver script
+   * expects to find in its current working directory.
+   */
+  private String solve(JSONObject postRequestJson)
+      throws IOException, InterruptedException
+  {
+    Path requestDir = Files.createTempDirectory("sudoku-request-");
+    try {
+      File sudokuConfigFile = new File(requestDir.toFile(), getSudokuConfigFile().getName());
+      File sudokuOutputFile = new File(requestDir.toFile(), getSudokuOutputFile().getName());
+      writeSudokuConfigFile(postRequestJson, sudokuConfigFile, sudokuOutputFile);
+      return runSolver(requestDir.toFile(), sudokuOutputFile);
+    } finally {
+      deleteRecursive(requestDir);
+    }
   }
 
-  private void writeSudokuConfigFile(JSONObject postRequestJson) throws IOException {
-    File sudokuConfigFile = getSudokuConfigFile();
-    sudokuConfigFile.delete();
-    JSONObject configJson = createConfigJSON(postRequestJson);
+  private String runSolver(File workingDir, File sudokuOutputFile)
+      throws IOException, InterruptedException
+  {
+    String command = getSolverScript().getCanonicalPath();
+    execute(command, workingDir);
+    return readFile(sudokuOutputFile);
+  }
+
+  private void writeSudokuConfigFile(
+      JSONObject postRequestJson, File sudokuConfigFile, File sudokuOutputFile)
+      throws IOException
+  {
+    JSONObject configJson = createConfigJSON(postRequestJson, sudokuOutputFile);
     System.out.println("Writing JSON input to file: " + sudokuConfigFile);
     FileWriter writer = new FileWriter(sudokuConfigFile);
     configJson.writeJSONString(writer);
     writer.close();
   }
-  
-  
+
+
   @SuppressWarnings("unchecked")
-  private JSONObject createConfigJSON(JSONObject postRequestJson) {
+  private JSONObject createConfigJSON(JSONObject postRequestJson, File sudokuOutputFile) {
     JSONArray boardJson = (JSONArray) postRequestJson.get("board");
     JSONObject configJson = new JSONObject();
-    File sudokuOutputFile = getSudokuOutputFile();
     configJson.put("input_board", boardJson);
     configJson.put("output_file", sudokuOutputFile.getName());
     return configJson;
   }
 
 
-  private static void execute(String command)
+  private static void execute(String command, File workingDir)
       throws InterruptedException, IOException
   {
     System.out.println("Command: " + command);
     String[] cmdargs = {"bash", "-l", command};
-    ProcessBuilder pb = new ProcessBuilder(cmdargs).inheritIO();
-    pb.environment();
+    ProcessBuilder pb = new ProcessBuilder(cmdargs).directory(workingDir).inheritIO();
     Process process = pb.start();
     int exitValue = process.waitFor();
     if(exitValue != 0) {
       throw new IOException(String.format(
           "Error code %d returned from command: %s", exitValue, command));
+    }
+  }
+
+  private static void deleteRecursive(Path dir) {
+    try (Stream<Path> paths = Files.walk(dir)) {
+      paths.sorted(Comparator.reverseOrder()).forEach(path -> {
+        try {
+          Files.deleteIfExists(path);
+        } catch (IOException e) {
+          System.err.println("Failed to delete " + path + ": " + e.getMessage());
+        }
+      });
+    } catch (IOException e) {
+      System.err.println("Failed to clean up " + dir + ": " + e.getMessage());
     }
   }
 
