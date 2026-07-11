@@ -21,6 +21,27 @@ There are package consists of three main components:
   sudoku_ui_prj is implemented using [ReactJS][reactjs].
   This server serves webpages that can be rendered by browsers.
 
+## Getting Started
+
+Pick whichever of these matches what you're trying to do — each links to the fuller section below.
+
+- **Just want to use the service?** Install Docker, clone this repo, then see
+  ["Running the published service"](#running-the-published-service):
+
+      docker compose pull
+      docker compose up
+
+- **Want to develop/edit the code?** See ["Development"](#development): install the VS Code "Dev
+  Containers" extension, open this repo, choose "Reopen in Container," then from a terminal in it:
+
+      bash scripts/dev-run.sh
+
+- **Just want to solve one board from the command line, no server/UI at all?** See
+  ["Solving a board from the command line"](#solving-a-board-from-the-command-line), from a terminal with
+  the `sudoku_solver_inez` toolchain built (e.g. inside the devcontainer):
+
+      bash scripts/test_solver.sh
+
 ## Running the published service
 
 Docker images running this web service are available on Docker Hub as two
