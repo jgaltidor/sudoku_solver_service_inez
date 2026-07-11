@@ -52,6 +52,16 @@ also exercises `solver.ml` in isolation from the Java layer. `run_tests.sh` can'
 bind-mounts `sudoku_solver_inez/` and `SudokuServer/`, not `scripts/` or `tests/`. See `tests/README.md`
 for both.
 
+**Running any of the `:8080`/`:3000` checks above from inside the devcontainer's own terminal** (as
+opposed to the real host machine) needs one extra one-time step first — the devcontainer is a sibling
+container to `backend`/`frontend`, not on their network, so plain `localhost` doesn't reach them from
+there (see CLAUDE.md's Devcontainer section):
+
+```bash
+docker network connect sudoku-solver-service_default $(hostname)   # once per devcontainer instance
+bash tests/solver/http_check.sh http://backend:8080/
+```
+
 ## Less common paths
 
 - `scripts/run-native.sh`: only for developing with no Docker/devcontainer at all (Java+Maven, Node, and

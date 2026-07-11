@@ -59,6 +59,16 @@ the two can't silently drift apart. This is the same check as the curl example t
 `.claude/skills/run/SKILL.md`'s "Verifying it worked" section, now generalized into a reusable script
 that section calls instead of an inline snippet.
 
+**From inside the devcontainer's own terminal**, the default `http://localhost:8080/` won't reach the
+sibling `backend` container (see CLAUDE.md's Devcontainer section for why — different network namespace,
+and `host.docker.internal` hangs rather than helping here). Attach to the compose network once per
+devcontainer instance and pass the service name instead:
+
+```bash
+docker network connect sudoku-solver-service_default $(hostname)
+bash tests/solver/http_check.sh http://backend:8080/
+```
+
 ## Other components' tests
 
 - `sudoku_solver_inez/src/tests.opt` — plain-OCaml unit tests for the non-solver helper modules

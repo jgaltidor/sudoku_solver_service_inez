@@ -10,7 +10,11 @@
 # this can't silently drift from run_tests.sh's version of the same cases.
 #
 # Usage: bash tests/solver/http_check.sh [backend_url]
-#   backend_url defaults to http://localhost:8080/
+#   backend_url defaults to http://localhost:8080/. From inside the
+#   devcontainer's own terminal, localhost won't reach the sibling backend
+#   container -- run `docker network connect sudoku-solver-service_default
+#   $(hostname)` once per devcontainer instance, then pass
+#   http://backend:8080/ instead (see CLAUDE.md's Devcontainer section).
 # Exit code is 0 iff every case passes.
 set -euo pipefail
 
@@ -20,6 +24,7 @@ backend_url=${1:-http://localhost:8080/}
 
 failures=0
 total=0
+backend_unreachable=0
 
 for case_file in "$testdir"/cases/*.json; do
   name=$(basename "$case_file" .json)
@@ -32,12 +37,23 @@ for case_file in "$testdir"/cases/*.json; do
     continue
   fi
 
+  if [ "$backend_unreachable" -eq 1 ]; then
+    echo "FAIL $name (HTTP): skipped -- backend already found unreachable above" >&2
+    failures=$((failures + 1))
+    continue
+  fi
+
   actual_file=$(mktemp)
 
   echo "+ curl -s -H 'Content-Type: application/json' -X POST -d @${case_file#$basedir/} $backend_url"
 
-  if ! curl -sf -H "Content-Type: application/json" -X POST -d "@$case_file" "$backend_url" -o "$actual_file"; then
+  # --connect-timeout/--max-time bound this so a networking dead-end (e.g. the
+  # host.docker.internal hang from inside the devcontainer -- see the usage
+  # note above) fails fast instead of hanging indefinitely.
+  if ! curl -sf --connect-timeout 5 --max-time 15 -H "Content-Type: application/json" -X POST -d "@$case_file" "$backend_url" -o "$actual_file"; then
     echo "FAIL $name (HTTP): curl request to $backend_url failed -- is the backend running? (bash scripts/dev-run.sh)" >&2
+    echo "If you're inside the devcontainer's own terminal, localhost won't reach the sibling backend container -- see this script's usage comment above (or CLAUDE.md's Devcontainer section) for the docker network connect + http://backend:8080/ workaround." >&2
+    backend_unreachable=1
     failures=$((failures + 1))
     rm -f "$actual_file"
     continue

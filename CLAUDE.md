@@ -347,6 +347,27 @@ listening on `127.0.0.1:3000` from a since-recreated container instance. Not dec
 It doesn't remove VS Code's manual "Forward a Port" action from the Ports panel, though — manually
 forwarding 3000/8080 there recreates the identical stale-listener risk by hand, so don't.
 
+That `localhost:3000`/`:8080` claim above is specifically about the real host machine (a browser or
+terminal on the actual laptop) — it does **not** extend to a terminal running *inside* the devcontainer
+itself. The devcontainer is a sibling container to `backend`/`frontend` (same Docker daemon, reached via
+the bind-mounted `docker.sock`), not part of the `docker-compose` project's network, so `localhost` inside
+its own terminal is that container's own private loopback; Compose's `ports:` mapping publishes to the
+real host's network stack, which a sibling container simply isn't on. `host.docker.internal` (Docker
+Desktop's usual escape hatch for reaching the host from inside a container) hangs here rather than
+connecting — confirmed 2026-07-10, cause not further diagnosed. The reliable fix instead is to attach the
+devcontainer to the compose network once per container instance and use the Compose service name (Docker's
+embedded per-network DNS) rather than any `localhost`/host-loopback route:
+
+```bash
+docker network connect sudoku-solver-service_default $(hostname)   # $(hostname) is this container's own ID
+curl -H "Content-Type: application/json" -X POST http://backend:8080/ -d '{"board": [...]}'
+```
+
+(the `Content-Type` header is required — NanoHTTPD/`App.java` returns an empty response without it, a
+separate gotcha from the networking one above). This connection persists for the life of the devcontainer
+container instance, so it's a one-time step per instance, not per terminal/session — but it doesn't survive
+the devcontainer being recreated (e.g. after a `devcontainer.json` change), so redo it after that.
+
 ## Notes
 
 - `SudokuServer`'s `mvn package` targets Java 11 (`maven-compiler-plugin` `<release>11</release>`) and
