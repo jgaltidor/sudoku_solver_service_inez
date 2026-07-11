@@ -44,6 +44,20 @@ script deliberately avoids f-strings: the backend image's system `python3` is 3.
 base — see CLAUDE.md's "Docker build architecture" and Notes), which predates f-string support, so it
 uses `.format()` instead. Keep that in mind if you touch `compare_output.py`.
 
+### `http_check.sh` — HTTP-level alternative, no toolchain required
+
+```bash
+bash tests/solver/http_check.sh [backend_url]   # backend_url defaults to http://localhost:8080/
+```
+
+Re-runs just the `box_duplicate` case (the box-constraint regression), but through SudokuServer's HTTP API
+instead of `scripts/solve.sh` — so it needs a running backend (`bash scripts/dev-run.sh`) rather than the
+OCaml/Inez/SCIP toolchain, and it also exercises the Java request/response layer, not just `solver.ml`
+directly. It reuses `cases/box_duplicate.json` as the POST body and `expected/box_duplicate.json` plus
+`compare_output.py` to check the response, so it can't silently drift from `run_tests.sh`'s version of the
+same case. This is the same check as the curl example in `.claude/skills/run/SKILL.md`'s "Verifying it
+worked" section, just as a reusable script instead of an inline snippet.
+
 ## Other components' tests
 
 - `sudoku_solver_inez/src/tests.opt` — plain-OCaml unit tests for the non-solver helper modules
