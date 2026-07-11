@@ -36,6 +36,10 @@ for case_file in "$testdir"/cases/*.json; do
 
   actual_file=$(mktemp)
 
+  # Echo the equivalent command line, as a reminder of how to solve a board
+  # directly (see scripts/solve.sh) -- rerun this case by hand with:
+  echo "+ bash scripts/solve.sh ${case_file#$basedir/}"
+
   if ! solve_log=$(bash "$solve" "$case_file" "$actual_file" 2>&1); then
     echo "FAIL $name: scripts/solve.sh itself failed:" >&2
     echo "$solve_log" >&2
