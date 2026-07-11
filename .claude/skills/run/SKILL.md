@@ -37,7 +37,21 @@ yet published, run `scripts/dev-build.sh` (or `docker/build.sh`) once first.
 ```bash
 bash SudokuServer/requests/req1.sh   # POST a sample board to the backend on :8080, expect a solved board
 curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3000/   # frontend should return 200
+
+# Regression check for solver.ml's row/column/3x3-box uniqueness constraints: two
+# givens sharing a box but different row and column (same board as
+# tests/solver/cases/box_duplicate.json) - expect "has_solution": false. A solver.ml
+# that dropped the box constraint would wrongly report this solvable.
+curl -s -H "Content-Type: application/json" -X POST \
+  -d '{ "board": [[5,0,0,0,0,0,0,0,0],[0,5,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0]] }' \
+  http://localhost:8080/ | grep has_solution
 ```
+
+For the fuller solver regression suite (this case plus row/column-only violations and a same-box/different-numbers
+sanity check), run `bash tests/solver/run_tests.sh` instead — but that needs the OCaml/Inez/SCIP toolchain
+directly on PATH (devcontainer or native checkout), not just the running `backend` container: the
+`docker compose`-built `backend` service only bind-mounts `sudoku_solver_inez/` and `SudokuServer/`, not
+`scripts/` or `tests/`, so `run_tests.sh` can't run *inside* that container the way the curl checks above can.
 
 ## Less common paths
 
