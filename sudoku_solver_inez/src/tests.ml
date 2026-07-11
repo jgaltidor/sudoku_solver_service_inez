@@ -22,6 +22,8 @@ let board2 = Sudoku_board.board_of_nums sudoku_board_arr ;;
 
 printf "board1 = board2: %b\n" (Sudoku_board.equals board1 board2) ;;
 
+assert (Sudoku_board.equals board1 board2) ;;
+
 let board_unsolved1 =
   Sudoku_board.board_of_nums
     [[5; 0; 4;  0; 7; 8;  0; 1; 2];
@@ -57,15 +59,28 @@ printf "board_unsolved2: %s\n" (Sudoku_board.string_of_board board_unsolved2) ;;
 
 printf "board_solved: %s\n" (Sudoku_board.string_of_board board_solved) ;;
 
+(* board_unsolved1 is hardcoded above; board_unsolved2 is the same board
+ * read back from sudoku_config.json via Sudoku_config.get_input_board.
+ * They should parse to the same board. *)
+assert (Sudoku_board.equals board_unsolved1 board_unsolved2) ;;
+
 printf "is_solved(board_unsolved1): %b\n"
   (Sudoku_board.is_solved board_unsolved1)
 ;;
+
+assert (not (Sudoku_board.is_solved board_unsolved1)) ;;
 
 printf "is_solved(board_unsolved2): %b\n"
   (Sudoku_board.is_solved board_unsolved2)
 ;;
 
+assert (not (Sudoku_board.is_solved board_unsolved2)) ;;
+
 printf "is_solved(board_solved): %b\n"
   (Sudoku_board.is_solved board_solved)
 ;;
+
+assert (Sudoku_board.is_solved board_solved) ;;
+
+print_string "All assertions passed.\n" ;;
 

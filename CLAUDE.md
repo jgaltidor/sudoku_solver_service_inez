@@ -25,6 +25,24 @@ other over HTTP or via the filesystem — there is no shared build system or lib
   (`sudoku_ui_prj/sudoku-ui-src/Dockerfile`), separate from the backend — see "Docker build architecture"
   below.
 
+## `sudoku_solver_inez` internals
+
+`sudoku_solver_inez/src/solver.ml` is the top-level/entry file for generating the constraints that Inez
+understands — it's the file fed into `inez.top` (see `solver.sh`/`run_solver.sh`). Every other `.ml` file
+in that directory (`sudoku_board.ml`, `sudoku_config.ml`, `sudoku_entry.ml`, `utils.ml`) is a plain, legal
+OCaml file with no Inez constraint expressions in it; they just provide the functions `solver.ml` calls
+(board/entry representations, reading `sudoku_config.json`, small utilities). Inez constraint expressions
+are the ones written as `~logic (...)`, e.g. `constrain (~logic (var >= 1))` — grep for `~logic` in
+`solver.ml` to find them. See the [Inez wiki](https://github.com/vasilisp/inez/wiki) for the constraint
+language itself.
+
+Mechanically, `solver.ml` builds one large SMT/ILP formula with unknowns (one Inez integer variable per
+board cell, `position2Var` in `solver.ml`) and constrains it to encode both the input board (fixed values
+for non-blank cells, `1..9` domain for blank ones) and Sudoku's row/column/3x3-box uniqueness rules (box
+size is hardcoded to 3, i.e. a standard 9x9 board). Handing that formula to `solve ()` and, if
+`solution_found`, reading back each variable's concrete value via `ideref_exn` is what turns an SMT/ILP
+solution into a solved Sudoku board.
+
 ## Build / run commands
 
 There is no top-level build tool — each component builds independently, and the Docker image is what
@@ -63,6 +81,10 @@ omake tests.opt && ./tests.opt              # runs sudoku_solver_inez/src/tests.
 # from the command line" section) - preferred over invoking run_solver.sh by hand:
 bash scripts/test_solver.sh                            # bundled example
 bash scripts/solve.sh example_inputs/solve_input_example.json  # equivalent, explicit form
+
+# Solver-level regression tests (exercises solver.ml's actual Inez constraints,
+# unlike tests.opt above - see tests/README.md), same toolchain requirement as solve.sh:
+bash tests/solver/run_tests.sh
 ```
 
 `run_solver.sh` itself takes no arguments and reads no stdin (a `run_solver.sh < some_file.json` you might

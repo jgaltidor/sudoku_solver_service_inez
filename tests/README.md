@@ -1,0 +1,55 @@
+# Tests
+
+This repo's three components each have their own test entry point; there's no shared test runner.
+This directory adds one more: solver-level regression tests that exercise `solver.ml`'s actual Inez
+constraints end-to-end.
+
+## `tests/solver/` — solver regression tests
+
+```bash
+bash tests/solver/run_tests.sh
+```
+
+Runs each board in `tests/solver/cases/*.json` through `scripts/solve.sh`, compares the result against
+the matching fixture in `tests/solver/expected/`, and exits non-zero if any case doesn't match — suitable
+as a CI step. Each expected fixture always checks `has_solution`; it only checks `solved_board` when the
+case has a unique solution (`unique_solution.json`) — several cases are deliberately under-constrained
+(just one or two givens) specifically to isolate one constraint, so the solver's own choice of completion
+isn't deterministic and can't be diffed exactly for those.
+
+Current cases:
+
+- `unique_solution.json` — a fully-specified board with a known unique solution; checks the solver
+  produces exactly that solution.
+- `row_duplicate.json` / `col_duplicate.json` — two identical givens in the same row/column (but
+  different boxes) with everything else blank; unsolvable, isolating the row/column constraints.
+- `box_duplicate.json` — two identical givens in the same 3x3 box but different row and column, with
+  everything else blank; unsolvable. This is a regression test for a real bug: `solver.ml` used to only
+  constrain rows and columns, not boxes, so this exact case used to incorrectly report a solution.
+- `box_ok_distinct_numbers.json` — two *different* givens in the same box; solvable, checking the box
+  constraint isn't overly restrictive (e.g. an off-by-one in the box-index math incorrectly treating
+  unrelated cells as sharing a box).
+
+Requires the OCaml/Inez/SCIP toolchain (same requirement `scripts/solve.sh` itself documents) — run this
+inside the devcontainer or a native checkout with the toolchain installed, not the plain
+`docker compose`-built `backend` service container (which only bind-mounts `sudoku_solver_inez/` and
+`SudokuServer/`, not this directory or `scripts/`).
+
+To add a case: drop a `{"board": [...]}` file in `cases/`, and a matching `{"has_solution": ...}` (plus
+`solved_board` if and only if the board has one deterministic solution) in `expected/` under the same
+name.
+
+## Other components' tests
+
+- `sudoku_solver_inez/src/tests.opt` — plain-OCaml unit tests for the non-solver helper modules
+  (`sudoku_board.ml`, `sudoku_config.ml`, etc.). Build and run with:
+
+  ```bash
+  cd sudoku_solver_inez/src && eval `opam config env` && omake tests.opt && ./tests.opt
+  ```
+
+  These use real `assert`s, so a non-zero exit code means a real regression, not just a printed value to
+  eyeball.
+- `SudokuServer` (Java) — JUnit tests under `src/test/java`, run via `mvn test` (or `mvn package`, which
+  runs them too). No toolchain-specific setup needed beyond Java + Maven.
+- `sudoku_ui_prj` — no test suite yet; `package.json` only has `start`/`build`/`preview`.

@@ -93,6 +93,32 @@ let () =
   done
   ;
 
+  (* Constraint adding:
+   * Each 3x3 box should not contain duplicates
+   *)
+  let box_size = 3 in
+  let num_box_rows = num_rows / box_size in
+  let num_box_cols = num_cols / box_size in
+  let cellsPerBox = box_size * box_size in
+  for boxRow = 0 to num_box_rows - 1 do
+    for boxCol = 0 to num_box_cols - 1 do
+      let baseRow = boxRow * box_size in
+      let baseCol = boxCol * box_size in
+      for cellLeft = 0 to cellsPerBox - 1 do
+        let rowLeft = baseRow + (cellLeft / box_size) in
+        let colLeft = baseCol + (cellLeft mod box_size) in
+        let leftVar = Hashtbl.find_exn position2Var (rowLeft, colLeft) in
+        for cellRight = (cellLeft + 1) to cellsPerBox - 1 do
+          let rowRight = baseRow + (cellRight / box_size) in
+          let colRight = baseCol + (cellRight mod box_size) in
+          let rightVar = Hashtbl.find_exn position2Var (rowRight, colRight) in
+          constrain (~logic (not (leftVar = rightVar)))
+        done
+      done
+    done
+  done
+  ;
+
   (* Run solver *)
   let solver_result = solve () in
 

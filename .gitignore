@@ -6,6 +6,7 @@
 *.cmxa
 *.o
 *.a
+*.opt
 *.omc
 .omakedb
 .omakedb.lock
