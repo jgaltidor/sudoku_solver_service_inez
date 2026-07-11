@@ -50,13 +50,14 @@ uses `.format()` instead. Keep that in mind if you touch `compare_output.py`.
 bash tests/solver/http_check.sh [backend_url]   # backend_url defaults to http://localhost:8080/
 ```
 
-Re-runs just the `box_duplicate` case (the box-constraint regression), but through SudokuServer's HTTP API
-instead of `scripts/solve.sh` — so it needs a running backend (`bash scripts/dev-run.sh`) rather than the
+Re-runs every case in `cases/*.json` (row/column/box violations, the unique-solution board, and the
+same-box/different-numbers sanity check), but through SudokuServer's HTTP API instead of
+`scripts/solve.sh` — so it needs a running backend (`bash scripts/dev-run.sh`) rather than the
 OCaml/Inez/SCIP toolchain, and it also exercises the Java request/response layer, not just `solver.ml`
-directly. It reuses `cases/box_duplicate.json` as the POST body and `expected/box_duplicate.json` plus
-`compare_output.py` to check the response, so it can't silently drift from `run_tests.sh`'s version of the
-same case. This is the same check as the curl example in `.claude/skills/run/SKILL.md`'s "Verifying it
-worked" section, just as a reusable script instead of an inline snippet.
+directly. It reuses the same `cases/`/`expected/` fixtures and `compare_output.py` as `run_tests.sh`, so
+the two can't silently drift apart. This is the same check as the curl example that used to live in
+`.claude/skills/run/SKILL.md`'s "Verifying it worked" section, now generalized into a reusable script
+that section calls instead of an inline snippet.
 
 ## Other components' tests
 

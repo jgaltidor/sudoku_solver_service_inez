@@ -38,17 +38,19 @@ yet published, run `scripts/dev-build.sh` (or `docker/build.sh`) once first.
 bash SudokuServer/requests/req1.sh   # POST a sample board to the backend on :8080, expect a solved board
 curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3000/   # frontend should return 200
 
-# Regression check for solver.ml's row/column/3x3-box uniqueness constraints (a
-# solver.ml that dropped the box constraint would wrongly report this solvable):
+# Regression checks for solver.ml's row/column/3x3-box uniqueness constraints (a
+# solver.ml that dropped the box constraint, say, would wrongly report that case solvable):
 bash tests/solver/http_check.sh
 ```
 
-For the fuller solver regression suite (this case plus row/column-only violations and a same-box/different-numbers
-sanity check), run `bash tests/solver/run_tests.sh` instead — but that needs the OCaml/Inez/SCIP toolchain
-directly on PATH (devcontainer or native checkout), not just the running `backend` container: the
-`docker compose`-built `backend` service only bind-mounts `sudoku_solver_inez/` and `SudokuServer/`, not
-`scripts/` or `tests/`, so `run_tests.sh` can't run *inside* that container the way `http_check.sh` (a
-plain curl request against the already-published `:8080` port) can. See `tests/README.md` for both.
+`http_check.sh` runs the same `tests/solver/cases/*.json`/`expected/*.json` fixtures as
+`bash tests/solver/run_tests.sh`, just over HTTP against the already-published `:8080` port instead of
+through `scripts/solve.sh` directly — so it needs only a running backend, not the OCaml/Inez/SCIP
+toolchain. Prefer `run_tests.sh` when the toolchain *is* available (devcontainer or native checkout): it
+also exercises `solver.ml` in isolation from the Java layer. `run_tests.sh` can't run *inside* the plain
+`docker compose`-built `backend` container the way `http_check.sh` can, though — that container only
+bind-mounts `sudoku_solver_inez/` and `SudokuServer/`, not `scripts/` or `tests/`. See `tests/README.md`
+for both.
 
 ## Less common paths
 
