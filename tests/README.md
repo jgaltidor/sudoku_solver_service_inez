@@ -39,6 +39,11 @@ To add a case: drop a `{"board": [...]}` file in `cases/`, and a matching `{"has
 `solved_board` if and only if the board has one deterministic solution) in `expected/` under the same
 name.
 
+`run_tests.sh` shells out to `compare_output.py` (`python3`) to diff actual vs. expected output. That
+script deliberately avoids f-strings: the backend image's system `python3` is 3.5 (the `ubuntu:16.04`
+base — see CLAUDE.md's "Docker build architecture" and Notes), which predates f-string support, so it
+uses `.format()` instead. Keep that in mind if you touch `compare_output.py`.
+
 ## Other components' tests
 
 - `sudoku_solver_inez/src/tests.opt` — plain-OCaml unit tests for the non-solver helper modules
