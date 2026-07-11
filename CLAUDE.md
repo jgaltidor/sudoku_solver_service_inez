@@ -356,3 +356,6 @@ forwarding 3000/8080 there recreates the identical stale-listener risk by hand, 
 - Root `.gitignore` deliberately does *not* blanket-ignore `sudoku_config.json` — a fixture copy at
   `sudoku_solver_inez/src/sudoku_config.json` is intentionally tracked (Inez's default example board);
   only the root and `SudokuServer/` copies (overwritten per-request by the running server) are ignored.
+- The backend image's system `python3` is 3.5 (the `ubuntu:16.04` base — see "Docker build architecture"
+  above), which doesn't support f-strings. Any script meant to run inside that image or container (e.g.
+  `tests/solver/compare_output.py`) needs `.format()`/`%`-style string formatting instead.
