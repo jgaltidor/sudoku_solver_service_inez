@@ -21,6 +21,12 @@ RUN chown -R dev:dev ${HOME}/app
 # reads file /etc/localtime. This file is a broken
 # symbolic link if tzdata is not installed
 
+# python3 is listed explicitly for tests/solver/compare_output.py, used by
+# tests/solver/run_tests.sh and http_check.sh -- it happened to already be
+# present as a transitive dependency of software-properties-common below
+# (needed for add-apt-repository, unrelated to Python), but that's incidental
+# and could disappear if that step ever changes.
+
 # Install software dependencies
 RUN apt-get -y update && apt-get -y install --no-install-recommends \
   tzdata \
@@ -40,7 +46,8 @@ RUN apt-get -y update && apt-get -y install --no-install-recommends \
   openssh-client \
   unzip \
   ca-certificates \
-  dos2unix
+  dos2unix \
+  python3
 
 # Install Java 11
 
